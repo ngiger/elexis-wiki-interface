@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.add_dependency 'rubyzip', '< 1.0.0'
   spec.add_dependency 'mediawiki-gateway'
-#  spec.add_dependency 'eclipse-plugin'
+  spec.add_dependency 'eclipse-plugin', '>= 0.1'
   spec.add_development_dependency "bundler", "~> 1.5"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec"
