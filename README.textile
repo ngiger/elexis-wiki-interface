@@ -12,6 +12,8 @@ Copyright: 2014 (c) by Niklaus Giger <niklaus.giger@member.fsf.org>
 
 h2. Installation
 
+Ensure that you use Ruby 1.9.2 or higher (mediawiki-gateway does not support Ruby 1.8.7).
+
 Add this line to your application's Gemfile:
 
 bc.   $ gem 'elexis-wiki-interface'

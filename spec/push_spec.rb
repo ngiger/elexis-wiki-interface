@@ -16,6 +16,8 @@ describe 'Plugin' do
   it "should push a test page to the wiki.elexis.info" do
     fqdn = `hostname -f`
     pending 'do not run push test on travis' if fqdn.match(/travis-ci.org/)
+    hasConfig =  File.exists?('/etc/elexis-wiki-interface/config.yml') or File.exists?(File.join(Dir.pwd, 'config.yml'))
+    pending 'no config file' unless hasConfig
     search = "#{@dataDir}/**/*.mediawiki"
     mediawikis = Dir.glob(search)
     mediawikis.size.should == 1
