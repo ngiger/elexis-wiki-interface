@@ -50,6 +50,8 @@ h3. Limitations
 
 * No images are pulled/pushed at the moment.
 * No multilingual support at the moment
+* Do not check whether a link to the view exists on the wiki.elexis.info/Hauptseite
+* No support for features at the moment
 
 
 h2. Contributing
