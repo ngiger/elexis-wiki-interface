@@ -1,0 +1,10 @@
+#!/bin/env ruby
+workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
+workspace.pull
+system("git add -f */doc/*.mediawiki")
+system("git add -f */doc/*.png")
+system("git status")
+system("git commit --all -m '#{File.basename(__FILE__)}: Added mediawiki content from #{workspace.wiki}'")
+system("git status")
+system("git log -1")
+system("git push")

@@ -1,5 +1,6 @@
 require 'media_wiki'
 require 'fileutils'
+require 'open-uri'
 
 module Elexis
   module Wiki
@@ -7,8 +8,9 @@ module Elexis
       class Workspace
         attr_reader :info, :mw, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
-          @config_yml = File.join(Dir.pwd, 'config', 'hosts.yml')
-          raise "need a config file #{@config_yml} for wiki with user/password" unless File.exists?(@config_yml)
+          possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
+          possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
+          raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
           yaml = YAML.load_file(@config_yml)
           @user = yaml['user']
           @password = yaml['password']
@@ -23,13 +25,25 @@ module Elexis
           @plugins_missing_documentation      =[]
         end
         def show_missing(details = false)
-          puts "Eclipse-Workspace #{@info.workspace_dir} needs documenting "
-          puts "  #{views_missing_documentation.size} views"
-          puts "    #{views_missing_documentation.inspect}" if details
-          puts "  #{plugins_missing_documentation.size} plugins"
-          puts "    #{plugins_missing_documentation.inspect}" if details
-          puts "  #{perspectives_missing_documentation.size} perspectives"
-          puts "    #{perspectives_missing_documentation.inspect}" if details
+          if views_missing_documentation.size and
+              plugins_missing_documentation.size == 0 and
+              perspectives_missing_documentation.size == 0
+            puts "Eclipse-Workspace #{@info.workspace_dir} seems to have documented all views, plugins and perspectives"
+          else
+            puts "Eclipse-Workspace #{@info.workspace_dir} needs documenting "
+            if views_missing_documentation.size > 0
+              puts "  #{views_missing_documentation.size} views"
+              puts "    #{views_missing_documentation.inspect}" if details
+            end
+            if plugins_missing_documentation.size > 0
+              puts "  #{plugins_missing_documentation.size} plugins"
+              puts "    #{plugins_missing_documentation.inspect}" if details
+            end
+            if perspectives_missing_documentation.size > 0
+              puts "  #{perspectives_missing_documentation.size} perspectives"
+              puts "    #{perspectives_missing_documentation.inspect}" if details
+            end
+          end
         end
         def push
           raise "must define wiki with user and password in #{@config_yml}" unless @user and @password and @wiki
@@ -47,10 +61,19 @@ module Elexis
                             success = got == to_verify
                             puts "Failed to upload #{file} to #{pagename}" unless success
                        }
+              if to_push.size > 0
+            # upload also all *.png files
+              files_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
+              files_to_push.each {
+                                  |image|
+                                 pp image
+              @mw.upload(image)
+                                 }
+          end
           }
         end
 
-        def pull(commitAndPush = false)
+        def pull
           @info.plugins.each{
             |id, info|
               puts "Pulling for #{id}" if $VERBOSE
@@ -59,16 +82,6 @@ module Elexis
               pull_docs_perspectives(info)
           }
           saved = Dir.pwd
-          Dir.chdir(@info.workspace_dir)
-          if commitAndPush
-            system("git add -f */doc/*.mediawiki")
-            system("git status")
-            system("git commit --all -m '#{File.basename(__FILE__)}: Added mediawiki content from #{@wiki}'")
-            system("git status")
-            system("git log -1")
-            system("git push")
-          end
-          Dir.chdir(saved)
         end
 
         def perspectiveToPageName(perspective)
@@ -83,45 +96,39 @@ module Elexis
           # wurde unter http://wiki.elexis.info/Hauptseite ein Link Agenda (= view.name) angelegt.
           # evtl. sollten wir testen, ob dieser Link vorhanden ist
           # http://wiki.elexis.info/ChElexisIcpcViewsEpisodesview
-          # Could not fetch                                     ChElexisIcpcCodesview from #<MediaWiki::Gateway:0x00000001e30688>
-        # name = File.join(@dataDir, "ch.elexis.notes", "doc", "ChElexisIcpcViewsIcpccodesview.mediawiki")
-          x = %(
-#<struct Struct::UI_View
- id="ch.elexis.icpc.episodesView",
- category="ch.elexis.icpcCategory",
- translation="Probleme">
-viewToPageName for ch.elexis.icpc/ch.elexis.icpc.episodesView is ChElexisIcpcViewsEpisodesview
-Could not fetch ChElexisIcpcViewsCodesview from #<MediaWiki::Gateway:0x00000002c9b330>
-Workspace /opt/src/elexis-wiki-interface/spec/data/pull with 3 plugins 9/2 views 8/2 preferencePages 2 perspectives
-["/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.notes/doc/Ch.elexis.notes.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.agenda/doc/Ch.elexis.agenda.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.agenda/doc/ChElexisAgendaViewsTagesview.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.icpc/doc/ChElexisIcpcViewsEpisodesview.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.icpc/doc/ChElexisIcpcViewsEncounterview.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.icpc/doc/Ch.elexis.icpc.mediawiki",
- "/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.icpc/doc/P_ICPC.mediawiki"]
-"/opt/src/elexis-wiki-interface/spec/data/pull/ch.elexis.notes/doc/ChElexisIcpcViewsEpisodesview.mediawiki"
-)
-          regexp = /Episodes/i
-          pp view if view.id.match(regexp)
           comps = view.id.split('.')
           pageName = comps[0..-2].collect{|x| x.capitalize}.join + 'Views'+view.id.split('.').last.capitalize
-          puts "viewToPageName for #{plugin_id}/#{view.id} is #{pageName}" if $VERBOSE or  view.id.match(regexp)
+          puts "viewToPageName for #{plugin_id}/#{view.id} is #{pageName}" if $VERBOSE
           pageName
         end
         
         private
         def get_from_wiki_if_exists(plugin_id, pageName)
           content = @mw.get(pageName)
-          out_name = File.join(@info.workspace_dir, plugin_id, 'doc', pageName + '.mediawiki')
+          out_dir  = File.join(@info.workspace_dir, plugin_id, 'doc')
+          out_name = File.join(out_dir, pageName + '.mediawiki')
           if content
             dirname = File.dirname(out_name)
             FileUtils.makedirs(dirname) unless File.directory?(dirname)
             ausgabe = File.open(out_name, 'w+')
             ausgabe.puts content
             ausgabe.close
+            @mw.images(pageName).each{
+              |image|
+                downloaded_image = File.join(out_dir, image.split(':')[1..-1].join(':'))
+                unless File.exist? image
+                  json_url = "#{@wiki}?action=query&list=allimages&ailimit=5&aiprop=url&format=json&aiprefix=#{image.split(':')[1..-1].join(':')}"
+                  json = RestClient.get(json_url)
+                  image_url = JSON.parse(json)['query'].first[1].first['url']
+                  File.open(downloaded_image, 'w') do |file|
+                    file.write(open(image_url).read)
+                  end
+                end
+                puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE
+                break if defined?(RSpec) # speed up rspec
+            }
           else
-            puts "Could not fetch #{pageName} from #{@mw}" 
+            puts "Could not fetch #{pageName} from #{@mw}" unless defined?(RSpec)
           end
           content
         end
@@ -150,7 +157,6 @@ Workspace /opt/src/elexis-wiki-interface/spec/data/pull with 3 plugins 9/2 views
           @perspectives_missing_documentation << pageName unless content
         end
       end
-      # Your code goes here...
     end
   end
 end

@@ -7,8 +7,8 @@ require "elexis/wiki/interface/workspace"
 describe 'Plugin' do
 
   def remove_all_mediawik
-    mediawikis = Dir.glob("#{@dataDir}/**/*.mediawiki")
-    FileUtils.rm(mediawikis, :verbose => true) if mediawikis.size > 0
+    files2rm = Dir.glob("#{@dataDir}/**/*.mediawiki") + Dir.glob("#{@dataDir}/**/*.png")
+    FileUtils.rm(files2rm, :verbose => $VERBOSE) if files2rm.size > 0
   end
   before :all do
     @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'pull'))
@@ -44,6 +44,12 @@ describe 'Plugin' do
       mediawikis.size.should > 1
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
       Dir.glob(name).size.should == 1
+      search = "#{@dataDir}/**/doc/*.png"
+      images = Dir.glob(search)
+      images.size.should >= 2
   end
-
+  it "should show all users" do
+    workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
+    puts "We have #{workspace.mw.users.size} wiki users"
+  end if false
 end

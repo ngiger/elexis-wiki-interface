@@ -46,12 +46,22 @@ h3. Conventions
 ** a view view.name with a localized name localized_name has a page <plugin.name>Views<localized_name>
 ** a perspective perspective.name with a localized name localized_name has a page  P_<localized_name>
 
-h3. Limitations
+h3. Limitations/TODO
 
+* Upload all perspectives/view images from a jubula run
+** View-images were in doc_de/images/views/Artikelauswahl.png (localized_name) -> http://wiki.elexis.info/Datei:Ch.elexis:Artikelauswahl.png
+** https://srv.elexis.info/jenkins/view/3.0/job/Elexis-3.0-Jubula/118/artifact/test-results/screenshots/Other/https://srv.elexis.info/jenkins/view/3.0/job/Elexis-3.0-Jubula/118/artifact/test-results/screenshots/Other/Fixmedikation.png
+** Bug ch.elexis -> ch.elexis.core splitted. now you find it here
+*** ch.elexis.core.application/plugin_de.properties:elexis.articleSelectorView=Artikelauswahl
+*** ch.elexis.core.ui.laboratory/plugin_de.properties:elexis.articleSelectorView   = Artikelauswahl
+*** ch.elexis.core.ui/plugin_de.properties:elexis.articleSelectorView = Artikelauswahl
+*** ch.elexis.core.application/plugin.xml:            name="%elexis.articleSelectorView">
+** Missing line [[Datei:Ch.elexis:Artikelauswahl.png]] in http://wiki.elexis.info/ChElexisViewsArtikelArtikelselektor
+* Perspektives: were not uploaded to doc_de
 * No images are pulled/pushed at the moment.
-* No multilingual support at the moment
-* Do not check whether a link to the view exists on the wiki.elexis.info/Hauptseite
+* Check whether a link to the view exists on the wiki.elexis.info/Hauptseite
 * No support for features at the moment
+* No multilingual support at the moment
 
 
 h2. Contributing

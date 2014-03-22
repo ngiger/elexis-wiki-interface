@@ -1,0 +1,4 @@
+#!/bin/env ruby
+workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
+workspace.push
+
