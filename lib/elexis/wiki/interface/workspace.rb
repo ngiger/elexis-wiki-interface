@@ -60,9 +60,9 @@ module Elexis
           }
           saved = Dir.pwd
           Dir.chdir(@info.workspace_dir)
-          system("git add -f */doc/*.mediawiki")
-          system("git status")
           if commitAndPush
+            system("git add -f */doc/*.mediawiki")
+            system("git status")
             system("git commit --all -m '#{File.basename(__FILE__)}: Added mediawiki content from #{@wiki}'")
             system("git status")
             system("git log -1")
