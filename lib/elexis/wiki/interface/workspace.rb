@@ -1,3 +1,4 @@
+require 'eclipse/plugin'
 require 'media_wiki'
 require 'fileutils'
 require 'open-uri'
