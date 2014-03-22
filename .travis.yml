@@ -1,6 +1,9 @@
 language: ruby
 
-script: bundle exec rake spec
+script:
+  - bundle exec rspec
+  - bundle exec rake install
+
 install: bundle install --deployment --without debugger
 
 rvm:
