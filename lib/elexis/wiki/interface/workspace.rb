@@ -9,14 +9,7 @@ module Elexis
       class Workspace
         attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
-          possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
-          possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
-          raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
-          yaml = YAML.load_file(@config_yml)
-          @user = yaml['user']
-          @password = yaml['password']
-          @wiki = yaml['wiki']
-          puts "MediWiki #{@wiki} user #{@user} with password #{@password}" if $VERBOSE
+          @wiki = wiki
           @mw = MediaWiki::Gateway.new(@wiki)
           @info =  Eclipse::Workspace.new(dir)
           @info.parse_sub_dirs
@@ -47,6 +40,7 @@ module Elexis
           end
         end
         def push
+          check_config_file
           raise "must define wiki with user and password in #{@config_yml}" unless @user and @password and @wiki
           @mw.login(@user, @password)
           @info.plugins.each{
@@ -104,6 +98,17 @@ module Elexis
         end
         
         private
+        def check_config_file
+          possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
+          possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
+          raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
+          yaml = YAML.load_file(@config_yml)
+          @user = yaml['user']
+          @password = yaml['password']
+          @wiki = yaml['wiki']
+          puts "MediWiki #{@wiki} user #{@user} with password #{@password}" if $VERBOSE
+        end
+
         def get_from_wiki_if_exists(plugin_id, pageName)
           content = @mw.get(pageName)
           out_dir  = File.join(@info.workspace_dir, plugin_id, 'doc')
