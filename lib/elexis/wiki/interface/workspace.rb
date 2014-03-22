@@ -121,13 +121,30 @@ module Elexis
             ausgabe.close
             @mw.images(pageName).each{
               |image|
+                image = image.gsub(' ', '_')
                 downloaded_image = File.join(out_dir, image.split(':')[1..-1].join(':'))
                 unless File.exist? image
                   json_url = "#{@wiki}?action=query&list=allimages&ailimit=5&aiprop=url&format=json&aiprefix=#{image.split(':')[1..-1].join(':')}"
                   json = RestClient.get(json_url)
-                  image_url = JSON.parse(json)['query'].first[1].first['url']
-                  File.open(downloaded_image, 'w') do |file|
-                    file.write(open(image_url).read)
+                  unless json
+                    puts "JSON: Could not fetch for image #{image} using #{json_url}"
+                    next
+                  end
+                  begin
+                    answer = JSON.parse(json)
+                    image_url = nil
+                    image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
+                    if image_url
+                            File.open(downloaded_image, 'w') do |file|
+                              file.write(open(image_url).read)
+                            end
+                    else
+                      puts "skipping image #{image}"
+                    end
+                    rescue => e
+                      puts "JSON: Could not fetch for image #{image} using #{json_url}"
+                      puts "      was '#{json}'"
+                      puts "      error was #{e.inspect}"
                   end
                 end
                 puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE

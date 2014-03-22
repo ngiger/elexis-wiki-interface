@@ -4,6 +4,7 @@ require 'elexis/wiki/interface/workspace'
 
 workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
 workspace.pull
+workspace.show_missing(true)
 system("git add -f */doc/*.mediawiki")
 system("git add -f */doc/*.png")
 system("git status")
