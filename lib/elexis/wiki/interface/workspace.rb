@@ -6,7 +6,7 @@ module Elexis
   module Wiki
     module Interface
       class Workspace
-        attr_reader :info, :mw, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation
+        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
           possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
           possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }

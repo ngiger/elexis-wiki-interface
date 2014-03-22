@@ -1,4 +1,7 @@
 #!/bin/env ruby
+
+require 'elexis/wiki/interface/workspace'
+
 workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
 workspace.pull
 system("git add -f */doc/*.mediawiki")
