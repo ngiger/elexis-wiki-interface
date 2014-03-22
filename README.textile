@@ -1,0 +1,61 @@
+h1. Elexis::Wiki::Interface
+
+A Ruby Gem to allow pulling and pushing between Elexis source code repositories and the mediawiki installation
+
+Use it at your own risk, as it is just a small utility gem to help for some release engineering for the Elexis-RCP. See http://elexis.info.
+
+But I have an open ear for suggestions for improvements, especially if they come with a patch including specs.
+
+License: GPLv3 or later
+
+Copyright: 2014 (c) by Niklaus Giger <niklaus.giger@member.fsf.org>
+
+h2. Installation
+
+Add this line to your application's Gemfile:
+
+bc.   $ gem 'elexis-wiki-interface'
+
+And then execute:
+
+bc.   $ bundle
+
+Or install it yourself as:
+
+bc.   $ gem install elexis-wiki-interface
+
+h2. Usage
+
+bc.   require 'elexis/wiki/interface'
+  if =  Elexis::Wiki::Interface.new
+  if.pull # get actual mediawiki content and place it under doc inside the plugin
+  if.push # push doc/*.mediwiki files to the wiki
+  if.views_missing_documentation            # returns an array of plugin-ids
+  if.perspectives_missing_documentation     # returns an array of plugin-ids
+  if.plugins_missing_documentation          # returns an array of plugin-ids
+
+Or you can inspire you from rthe spec/*_spec.rb files to see tested examples.
+
+h3. Conventions
+
+* You must create a directory config with a file hosts.yml containing the mediawiki-gateway configuration (host, username, password)
+
+* The push/pull methods use the convention
+** in page names all '.' are removed
+** a plugin plugin.name has a page plugin.name
+** a view view.name with a localized name localized_name has a page <plugin.name>Views<localized_name>
+** a perspective perspective.name with a localized name localized_name has a page  P_<localized_name>
+
+h3. Limitations
+
+* No images are pulled/pushed at the moment.
+* No multilingual support at the moment
+
+
+h2. Contributing
+
+# Fork it ( http://github.com/ngiger/elexis-wiki-interface/fork )
+# Create your feature branch (`git checkout -b my-new-feature`)
+# Commit your changes (`git commit -am 'Add some feature'`)
+# Push to the branch (`git push origin my-new-feature`)
+# Create new Pull Request
