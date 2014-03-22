@@ -14,13 +14,15 @@ describe 'Plugin' do
   end
   
   it "should push a test page to the wiki.elexis.info" do
-      search = "#{@dataDir}/**/*.mediawiki"
-      mediawikis = Dir.glob(search)
-      mediawikis.size.should == 1
-      workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
-      workspace.push
-      content = workspace.mw.get('test')
-      content.should_not be nil
+    fqdn = `hostname -f`
+    pending 'do not run push test on travis' if fqdn.match(/travis-ci.org/)
+    search = "#{@dataDir}/**/*.mediawiki"
+    mediawikis = Dir.glob(search)
+    mediawikis.size.should == 1
+    workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
+    workspace.push
+    content = workspace.mw.get('test')
+    content.should_not be nil
   end
 
 end
