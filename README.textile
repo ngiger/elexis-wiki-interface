@@ -37,15 +37,17 @@ bc.   wiki_pull
 
 h3. in a ruby script
 
-bc.   require 'elexis/wiki/interface'
-  if =  Elexis::Wiki::Interface.new
-  if.pull # get actual mediawiki content and place it under doc inside the plugin
-  if.push # push doc/*.mediwiki files to the wiki
-  if.views_missing_documentation            # returns an array of plugin-ids
-  if.perspectives_missing_documentation     # returns an array of plugin-ids
-  if.plugins_missing_documentation          # returns an array of plugin-ids
+bc.  require 'elexis/wiki/interface/workspace'
+require 'pp'
+workspace =  Elexis::Wiki::Interface::Workspace.new('.')
+workspace.pull # get actual mediawiki content and place it under doc inside the plugin
+workspace.info.show
+pp workspace.views_missing_documentation            # returns an array of plugin-ids
+pp workspace.perspectives_missing_documentation     # returns an array of plugin-ids
+pp workspace.plugins_missing_documentation          # returns an array of plugis
+workspace.push # push doc/*.mediwiki files to the wiki
 
-Or you can inspire you from rthe spec/*_spec.rb files to see tested examples.
+Or you can inspire you from the spec/*_spec.rb files to see tested examples.
 
 h3. Conventions
 
