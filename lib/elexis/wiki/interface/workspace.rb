@@ -1,7 +1,10 @@
+#encoding: utf-8
+
 require 'eclipse/plugin'
 require 'media_wiki'
 require 'fileutils'
 require 'open-uri'
+require 'time'
 
 module Elexis
   module Wiki
@@ -48,24 +51,51 @@ module Elexis
               to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.mediawiki")
               to_push.each{
                            |file|
+                            # verify that locally committed file is newer than the page in the wiki
+                            # verify that the content after the push matches the local content
                             my_new_content = File.new(file).read
                             to_verify = my_new_content.gsub(/\n+/,"\n").chomp
-                            pagename = File.basename(file, '.mediawiki')
+                            pagename = File.basename(file, '.mediawiki').capitalize
+                            last_wiki_modification = get_page_modification_time(pagename)
+                            last_git_modification = get_git_modification(file)
+                            puts "upload #{File.basename(file)} #{last_git_modification > last_wiki_modification} as last_git_modification is #{last_git_modification} last_wiki_modification was #{last_wiki_modification}" if $VERBOSE
+                            next last_git_modification > last_wiki_modification
                             @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
                             got = @mw.get(pagename).gsub(/\n+/,"\n")
                             success = got == to_verify
                             puts "Failed to upload #{file} to #{pagename}" unless success
-                       }
-              if to_push.size > 0
-            # upload also all *.png files
-              files_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
-              files_to_push.each {
-                                  |image|
-                                 pp image
-              @mw.upload(image)
-                                 }
-          end
+                        }
+              if to_push.size > 0 # then upload also all *.png files
+                images_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
+                images_to_push.each{
+                                 |image|
+                                git_mod =  get_git_modification(image)
+                                wiki_mod = get_image_modification_name(image)
+                                puts "upload #{File.basename(image)} #{git_mod > wiki_mod} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod}" if $VERBOSE
+                                next unless git_mod > wiki_mod
+                                res = @mw.upload(image, {
+                                :text => 'ein Text',
+                                        :ignorewarnings => 'true',
+                                        :filename => File.basename(image),
+                                        :comment => "Uploaded by #{File.basename(__FILE__)}",
+                                        } )
+                                 puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.inspect} answer is #{res[0].root.elements.first}" # if $VERBOSE
+                }
+            end
           }
+        end
+
+        def get_git_modification(file)
+          return nil unless File.exists?(file)
+          git_time = `git log -1 --pretty=format:%ai #{file}`
+          return nil  unless git_time.length > 8
+          Time.parse(git_time.chomp).utc
+        end
+
+        def get_page_modification_time(pagename)
+          json_url = "#{@wiki}?action=query&format=json&prop=revisions&titles=#{pagename}&rvprop=timestamp"
+          json = RestClient.get(json_url)
+          wiki_json_timestamp_to_time(json, pagename)
         end
 
         def pull
@@ -96,8 +126,17 @@ module Elexis
           puts "viewToPageName for #{plugin_id}/#{view.id} is #{pageName}" if $VERBOSE
           pageName
         end
-        
+
         private
+        def wiki_json_timestamp_to_time(json, page_or_img)
+          return nil unless json
+          begin
+            m = json.match(/timestamp['"]:['"]([^'"]+)/)
+            return Time.parse(m[1]) if m
+          end
+          nil
+        end
+
         def check_config_file
           possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
           possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
@@ -107,6 +146,48 @@ module Elexis
           @password = yaml['password']
           @wiki = yaml['wiki']
           puts "MediWiki #{@wiki} user #{@user} with password #{@password}" if $VERBOSE
+        end
+
+        def shorten_wiki_image(image)
+          return File.basename(image) unless File.basename(image).index(':')
+          File.basename(image).split(':')[1..-1].join(':')
+        end
+
+        # http://wiki.elexis.info/api.php?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=Ch.elexis.notes:config.png&*
+        def get_image_modification_name(image)
+          json_url = "#{@wiki}?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=#{shorten_wiki_image(image)}"
+          json = RestClient.get(json_url)
+          wiki_json_timestamp_to_time(json, image)
+        end
+
+        # helper function, as mediawiki-gateway does not handle this situation correctly
+        def download_image_file(image, downloaded_image)
+          short_image = shorten_wiki_image(image)
+          unless File.exist? downloaded_image
+            json_url = "#{@wiki}?action=query&format=json&list=allimages&ailimit=5&aiprop=url&aiprefix=#{short_image}"
+            json = RestClient.get(json_url)
+            unless json
+              puts "JSON: Could not fetch for image #{image} using #{json_url}"
+              return
+            end
+            begin
+              answer = JSON.parse(json)
+              image_url = nil
+              image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
+              if image_url
+                      File.open(downloaded_image, 'w') do |file|
+                        file.write(open(image_url).read)
+                      end
+              else
+                puts "skipping image #{image}"
+              end
+              rescue => e
+                puts "JSON: Could not fetch for image #{image} using #{json_url}"
+                puts "      was '#{json}'"
+                puts "      error was #{e.inspect}"
+            end
+          end
+          puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE
         end
 
         def get_from_wiki_if_exists(plugin_id, pageName)
@@ -121,33 +202,9 @@ module Elexis
             ausgabe.close
             @mw.images(pageName).each{
               |image|
-                image = image.gsub(' ', '_')
-                downloaded_image = File.join(out_dir, image.split(':')[1..-1].join(':'))
-                unless File.exist? image
-                  json_url = "#{@wiki}?action=query&list=allimages&ailimit=5&aiprop=url&format=json&aiprefix=#{image.split(':')[1..-1].join(':')}"
-                  json = RestClient.get(json_url)
-                  unless json
-                    puts "JSON: Could not fetch for image #{image} using #{json_url}"
-                    next
-                  end
-                  begin
-                    answer = JSON.parse(json)
-                    image_url = nil
-                    image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
-                    if image_url
-                            File.open(downloaded_image, 'w') do |file|
-                              file.write(open(image_url).read)
-                            end
-                    else
-                      puts "skipping image #{image}"
-                    end
-                    rescue => e
-                      puts "JSON: Could not fetch for image #{image} using #{json_url}"
-                      puts "      was '#{json}'"
-                      puts "      error was #{e.inspect}"
-                  end
-                end
-                puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE
+                image = image.gsub(/[^\w\.:]/, '_')
+                downloaded_image = File.join(out_dir, shorten_wiki_image(image))
+                download_image_file(image, downloaded_image)
                 break if defined?(RSpec) # speed up rspec
             }
           else
