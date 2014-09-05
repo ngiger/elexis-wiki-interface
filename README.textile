@@ -32,7 +32,7 @@ h3. using some built-in helpers (mainly for the jenkins-CI)
 
 Each of the helper script below should work if you have a ruby installation >= 1.9.2 and executed @gem install bundler && bundle install@ in directory where
 bc.   wiki_pull
-  wiki_pull
+  wiki_pull_daily
   wiki_push
 
 h3. in a ruby script
@@ -48,6 +48,20 @@ pp workspace.plugins_missing_documentation          # returns an array of plugis
 workspace.push # push doc/*.mediwiki files to the wiki
 
 Or you can inspire you from the spec/*_spec.rb files to see tested examples.
+
+h3. Username/password to access your wiki
+
+The username and password is fetched from a config.yml, which may be either
+* /etc/elexis-wiki-interface/config.yml
+* <current workdir>/config.yml
+
+Here is an example:
+bc. ---
+  wiki: http://wiki.elexis.info/api.php
+  password: topsecrect
+  user: elexis
+
+This user must have the privilege to access the wiki via the API interface.
 
 h3. Conventions
 

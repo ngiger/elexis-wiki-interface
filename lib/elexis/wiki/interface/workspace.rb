@@ -10,7 +10,7 @@ module Elexis
   module Wiki
     module Interface
       class Workspace
-        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation
+        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
           @wiki = wiki
           @mw = MediaWiki::Gateway.new(@wiki)
@@ -20,12 +20,14 @@ module Elexis
           @views_missing_documentation        =[]
           @perspectives_missing_documentation =[]
           @plugins_missing_documentation      =[]
+          @features_missing_documentation     =[]
         end
         def show_missing(details = false)
           if views_missing_documentation.size and
               plugins_missing_documentation.size == 0 and
+              features_missing_documentation.size == 0 and
               perspectives_missing_documentation.size == 0
-            puts "Eclipse-Workspace #{@info.workspace_dir} seems to have documented all views, plugins and perspectives"
+            puts "Eclipse-Workspace #{@info.workspace_dir} seems to have documented all views, features, plugins and perspectives"
           else
             puts "Eclipse-Workspace #{@info.workspace_dir} needs documenting "
             if views_missing_documentation.size > 0
@@ -35,6 +37,10 @@ module Elexis
             if plugins_missing_documentation.size > 0
               puts "  #{plugins_missing_documentation.size} plugins"
               puts "    #{plugins_missing_documentation.inspect}" if details
+            end
+            if features_missing_documentation.size > 0
+              puts "  #{features_missing_documentation.size} features"
+              puts "    #{features_missing_documentation.inspect}" if details
             end
             if perspectives_missing_documentation.size > 0
               puts "  #{perspectives_missing_documentation.size} perspectives"
@@ -101,10 +107,15 @@ module Elexis
         def pull
           @info.plugins.each{
             |id, info|
-              puts "Pulling for #{id}" if $VERBOSE
+              puts "Pulling for plugin #{id}" if $VERBOSE
               pull_docs_views(info)
               pull_docs_plugins(info)
               pull_docs_perspectives(info)
+          }
+          @info.features.each{
+            |id, info|
+              puts "Pulling for feature #{id}" if $VERBOSE
+              pull_docs_features(info)
           }
           saved = Dir.pwd
         end
@@ -235,6 +246,16 @@ module Elexis
           pageName = id.capitalize
           content = get_from_wiki_if_exists(plugin.symbolicName, pageName)
           @perspectives_missing_documentation << pageName unless content
+        end
+        def pull_docs_features(feature)
+          id = feature.symbolicName
+          pageName = id.capitalize
+          content = get_from_wiki_if_exists(feature.symbolicName, pageName)
+          puts "get_from_wiki_if_exists #{id} #{pageName} content #{content != nil}"
+          unless content
+            content = get_from_wiki_if_exists(feature.symbolicName, pageName.sub(/feature$/, 'feature.feature.group'))
+            puts "get_from_wiki_if_exists 333 #{id} #{pageName} content #{content != nil}"
+          end
         end
       end
     end

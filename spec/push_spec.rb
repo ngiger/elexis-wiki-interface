@@ -20,11 +20,11 @@ describe 'Plugin' do
     pending 'no config file' unless hasConfig
     search = "#{@dataDir}/**/*.mediawiki"
     mediawikis = Dir.glob(search)
-    mediawikis.size.should == 1
+    expect mediawikis.size == 1
     workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
     workspace.push
     content = workspace.mw.get('test')
-    content.should_not be nil
+    expect content != nil
   end
   it "should show all users" do
     workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)

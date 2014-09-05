@@ -21,32 +21,37 @@ describe 'Plugin' do
   after :each do
     remove_all_mediawik
   end
-  
+
   it "should pull all mediawiki content for ch.elexis.core.ui" do
       workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
       workspace.pull
       workspace.info.show
-      workspace.info.views.size.should == 9
-      workspace.info.preferencePages.size.should == 8
-      workspace.info.perspectives.size.should == 2
+      expect workspace.info.views.size == 9
+      expect workspace.info.preferencePages.size == 8
+      expect workspace.info.perspectives.size == 2
+      expect workspace.info.plugins.size == 3
+      expect workspace.info.features.size == 1
       search = "#{@dataDir}/**/*.mediawiki"
       mediawikis = Dir.glob(search)
       workspace.show_missing(true)
-      workspace.views_missing_documentation.size.should <= 9
-      workspace.plugins_missing_documentation.size.should == 0
-      workspace.perspectives_missing_documentation.size.should <= 1
+      expect workspace.views_missing_documentation.size <= 9
+      expect workspace.plugins_missing_documentation.size == 0
+      expect workspace.perspectives_missing_documentation.size <= 1
       name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
-      Dir.glob(name).size.should == 1
+      expect Dir.glob(name).size == 1
       name = File.join(@dataDir, "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")
-      Dir.glob(name).size.should == 1
+      expect Dir.glob(name).size == 1
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
-      Dir.glob(name).size.should == 1
-      mediawikis.size.should > 1
+      expect Dir.glob(name).size == 1
+      expect mediawikis.size > 1
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
-      Dir.glob(name).size.should == 1
+      expect Dir.glob(name).size == 1
       search = "#{@dataDir}/**/doc/*.png"
       images = Dir.glob(search)
-      images.size.should >= 2
+      expect images.size >= 2
+      expect workspace.features_missing_documentation.size == 0
+      name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "*mediawiki")
+      Dir.glob(name).size == 1
   end
   it "should show all users" do
     workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
