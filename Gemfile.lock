@@ -8,7 +8,7 @@ PATH
 
 GIT
   remote: https://github.com/ngiger/eclipse-plugin
-  revision: 929dd0c604dbdea3b8e820c209805d5bb8153c98
+  revision: e7def80220a14ac39fd6c480b7eed018ddd7bea5
   specs:
     eclipse-plugin (0.2)
       nokogiri
