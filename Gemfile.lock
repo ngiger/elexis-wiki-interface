@@ -1,16 +1,16 @@
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.1)
+    elexis-wiki-interface (0.2)
       eclipse-plugin (>= 0.1)
       mediawiki-gateway
       rubyzip (< 1.0.0)
 
 GIT
   remote: https://github.com/ngiger/eclipse-plugin
-  revision: d8299b8693e7a4a3ff5a133edec420b7fe95c970
+  revision: 929dd0c604dbdea3b8e820c209805d5bb8153c98
   specs:
-    eclipse-plugin (0.1.1)
+    eclipse-plugin (0.2)
       nokogiri
       rubyzip (< 1.0.0)
 
