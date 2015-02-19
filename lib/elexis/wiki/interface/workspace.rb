@@ -238,7 +238,7 @@ module Elexis
           plugin.views.each{
             |id, view|
             pageName = viewToPageName(plugin.symbolicName, view)
-            content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
+            content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
             @views_missing_documentation << pageName unless content
           }
         end
@@ -247,14 +247,14 @@ module Elexis
           plugin.perspectives.each{
             |id, perspective|
             pageName = perspectiveToPageName(perspective)
-            content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
+            content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
             @perspectives_missing_documentation << pageName unless content
           }
         end
         def pull_docs_plugins(plugin)
           id = plugin.symbolicName
           pageName = id.capitalize
-          content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
+          content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
           @perspectives_missing_documentation << pageName unless content
         end
         def pull_docs_features(feature)

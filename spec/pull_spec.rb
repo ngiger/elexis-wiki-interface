@@ -62,8 +62,6 @@ describe 'Plugin' do
       name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
       expect(Dir.glob(name).size).to eq 1
       name = File.join(@dataDir, "ch.elexis.agenda", "*.mediawiki")
-      puts "Fx with #{Dir.glob(name).size} entries #{ Dir.glob("#{@dataDir}/ch.elexis.agenda/**/*.mediawiki")}"
-      system("ls -l #{Dir.glob("#{@dataDir}/ch.elexis.agenda/**/*.mediawiki").join(' ')}")
       expect(Dir.glob(name).size).to eq(0)
 
       name = File.join(@dataDir, "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")
@@ -75,7 +73,6 @@ describe 'Plugin' do
       name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "*mediawiki")
       expect(Dir.glob(name).size).to eq 1
 
-      skip "ICPC with space in symbolic name"
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
       expect(Dir.glob(name).size).to eq 1
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
