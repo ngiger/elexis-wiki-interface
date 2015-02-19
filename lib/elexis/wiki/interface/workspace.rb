@@ -17,7 +17,7 @@ module Elexis
           @wiki = wiki
           @mw = MediaWiki::Gateway.new(@wiki)
           @info = Eclipse::Workspace.new(dir)
-          @doc_projects = Dir.glob(File.join(dir, "**", ".project"))
+          @doc_projects = Dir.glob(File.join(dir, "doc_??", ".project"))
           @info.parse_sub_dirs
           @info.show if $VERBOSE
           @views_missing_documentation        =[]
@@ -233,15 +233,12 @@ module Elexis
           end
           content
         end
-        def get_from_wiki_if_exists(plugin_id, pageName)
-          get_content_from_wiki(File.join(@info.workspace_dir, plugin_id, 'doc'), pageName)
-        end
         def pull_docs_views(plugin)
           id = plugin.symbolicName
           plugin.views.each{
             |id, view|
             pageName = viewToPageName(plugin.symbolicName, view)
-            content = get_from_wiki_if_exists(plugin.symbolicName, pageName)
+            content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
             @views_missing_documentation << pageName unless content
           }
         end
@@ -250,23 +247,23 @@ module Elexis
           plugin.perspectives.each{
             |id, perspective|
             pageName = perspectiveToPageName(perspective)
-            content = get_from_wiki_if_exists(plugin.symbolicName, pageName)
+            content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
             @perspectives_missing_documentation << pageName unless content
           }
         end
         def pull_docs_plugins(plugin)
           id = plugin.symbolicName
           pageName = id.capitalize
-          content = get_from_wiki_if_exists(plugin.symbolicName, pageName)
+          content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
           @perspectives_missing_documentation << pageName unless content
         end
         def pull_docs_features(feature)
           id = feature.symbolicName
           pageName = id.capitalize
-          content = get_from_wiki_if_exists(feature.symbolicName, pageName)
+          content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
           unless content
-            content = get_from_wiki_if_exists(feature.symbolicName, pageName.sub(/feature$/, 'feature.feature.group'))
-            puts "get_from_wiki_if_exists failed #{id} #{pageName}" unless content
+            content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName.sub(/feature$/, 'feature.feature.group'))
+            puts "pull_docs_features failed #{id} #{pageName}" unless content
           end
         end
       end

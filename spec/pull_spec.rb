@@ -30,7 +30,7 @@ describe 'Plugin' do
       workspace.pull
       search = "#{@dataDir}/doc_??/*.mediawiki"
       mediawikis = Dir.glob(search)
-      mediawikis.size.should > 0
+      expect(mediawikis.size).to eq 1
   end
 
   it "should pull all mediawiki content for ch.elexis.core.ui" do
@@ -38,34 +38,49 @@ describe 'Plugin' do
       workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
       workspace.pull
       workspace.info.show
-      expect workspace.info.views.size == 8
-      expect workspace.info.preferencePages.size == 8
-      expect workspace.info.perspectives.size == 2
-      expect workspace.info.plugins.size == 3
-      expect workspace.info.features.size == 1
+      expect(workspace.info.views.size).to eq 9
+      expect(workspace.info.preferencePages.size).to eq 8
+      expect(workspace.info.perspectives.size).to eq 2
+      expect(workspace.info.plugins.size).to eq 3
+      expect(workspace.info.features.size).to eq 1
       search = "#{@dataDir}/**/*.mediawiki"
       mediawikis = Dir.glob(search)
+      expect(mediawikis.size).to be > 1
       workspace.show_missing(true)
-      expect workspace.views_missing_documentation.size <= 9
-      expect workspace.plugins_missing_documentation.size == 0
-      expect workspace.perspectives_missing_documentation.size <= 1
+      expect(workspace.views_missing_documentation.size).to be <= 9
+      expect(workspace.plugins_missing_documentation.size).to eq 0
+      expect(workspace.perspectives_missing_documentation.size).to be <= 1
+      if $VERBOSE
+        search = "#{@dataDir}/**/*.mediawiki"
+        wiki_files = Dir.glob(search)
+        puts "We have the pulled the following wiki_files\n#{wiki_files.join("\n")}"
+      end
       name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "Ch.elexis.core.application.feature.feature.group.mediawiki")
-      expect Dir.glob(name).size == 1
+      expect(Dir.glob(name).size).to eq 1
+      name = File.join(@dataDir, "ch.elexis.core.application.feature", "Ch.elexis.core.application.feature.feature.group.mediawiki")
+      expect(Dir.glob(name).size).to eq 0
       name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
-      expect Dir.glob(name).size == 1
+      expect(Dir.glob(name).size).to eq 1
+      name = File.join(@dataDir, "ch.elexis.agenda", "*.mediawiki")
+      puts "Fx with #{Dir.glob(name).size} entries #{ Dir.glob("#{@dataDir}/ch.elexis.agenda/**/*.mediawiki")}"
+      system("ls -l #{Dir.glob("#{@dataDir}/ch.elexis.agenda/**/*.mediawiki").join(' ')}")
+      expect(Dir.glob(name).size).to eq(0)
+
       name = File.join(@dataDir, "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")
-      expect Dir.glob(name).size == 1
-      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
-      expect Dir.glob(name).size == 1
-      expect mediawikis.size > 1
-      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
-      expect Dir.glob(name).size == 1
+      expect(Dir.glob(name).size).to eq 1
       search = "#{@dataDir}/**/doc/*.png"
       images = Dir.glob(search)
-      expect images.size >= 2
-      expect workspace.features_missing_documentation.size == 0
+      expect(images.size).to be >= 2
+      expect(workspace.features_missing_documentation.size).to eq 0
       name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "*mediawiki")
-      Dir.glob(name).size == 1
+      expect(Dir.glob(name).size).to eq 1
+
+      skip "ICPC with space in symbolic name"
+      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
+      expect(Dir.glob(name).size).to eq 1
+      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
+      expect(Dir.glob(name).size).to eq 1
+
   end  #if false
   it "should show all users" do
     workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
