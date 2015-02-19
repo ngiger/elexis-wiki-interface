@@ -11,7 +11,8 @@ module Elexis
   module Wiki
     module Interface
       class Workspace
-        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation, :doc_project
+        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation,
+            :doc_project, :features, :info
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
           @wiki = wiki
           @mw = MediaWiki::Gateway.new(@wiki)
@@ -228,7 +229,7 @@ module Elexis
                 break if defined?(RSpec) # speed up rspec
             }
           else
-            puts "Could not fetch #{pageName} from #{@mw}" unless defined?(RSpec)
+            puts "Could not fetch #{pageName} from #{@mw}" if $VERBOSE
           end
           content
         end
@@ -263,10 +264,9 @@ module Elexis
           id = feature.symbolicName
           pageName = id.capitalize
           content = get_from_wiki_if_exists(feature.symbolicName, pageName)
-          puts "get_from_wiki_if_exists #{id} #{pageName} content #{content != nil}"
           unless content
             content = get_from_wiki_if_exists(feature.symbolicName, pageName.sub(/feature$/, 'feature.feature.group'))
-            puts "get_from_wiki_if_exists 333 #{id} #{pageName} content #{content != nil}"
+            puts "get_from_wiki_if_exists failed #{id} #{pageName}" unless content
           end
         end
       end

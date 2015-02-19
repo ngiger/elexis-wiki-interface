@@ -49,6 +49,8 @@ describe 'Plugin' do
       expect workspace.views_missing_documentation.size <= 9
       expect workspace.plugins_missing_documentation.size == 0
       expect workspace.perspectives_missing_documentation.size <= 1
+      name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "Ch.elexis.core.application.feature.feature.group.mediawiki")
+      expect Dir.glob(name).size == 1
       name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
       expect Dir.glob(name).size == 1
       name = File.join(@dataDir, "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")

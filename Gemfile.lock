@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/ngiger/eclipse-plugin
-  revision: ff6ebe16e4502edf7e32b87358c84c583e1e82fd
+  revision: 95c841e67fa6712eb996ee870bfc95d4350cdf13
   specs:
-    eclipse-plugin (0.2)
+    eclipse-plugin (0.3)
       nokogiri
       rubyzip (< 1.0.0)
 
