@@ -18,6 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
   spec.add_dependency 'rubyzip', '< 1.0.0'
+  spec.add_dependency 'unicode'
   spec.add_dependency 'mediawiki-gateway'
   spec.add_dependency 'eclipse-plugin', '>= 0.1'
   spec.add_development_dependency "bundler", "~> 1.5"

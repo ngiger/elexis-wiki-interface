@@ -5,16 +5,18 @@ require 'media_wiki'
 require 'fileutils'
 require 'open-uri'
 require 'time'
+require 'yaml'
 
 module Elexis
   module Wiki
     module Interface
       class Workspace
-        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation
+        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation, :doc_project
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
           @wiki = wiki
           @mw = MediaWiki::Gateway.new(@wiki)
-          @info =  Eclipse::Workspace.new(dir)
+          @info = Eclipse::Workspace.new(dir)
+          @doc_projects = Dir.glob(File.join(dir, "**", ".project"))
           @info.parse_sub_dirs
           @info.show if $VERBOSE
           @views_missing_documentation        =[]
@@ -52,6 +54,11 @@ module Elexis
           check_config_file
           raise "must define wiki with user and password in #{@config_yml}" unless @user and @password and @wiki
           @mw.login(@user, @password)
+          @doc_projects.each{
+            |prj|
+            dir = File.dirname(prj)
+            get_content_from_wiki(dir, File.basename(dir))
+          }
           @info.plugins.each{
             |id,plugin|
               to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.mediawiki")
@@ -105,6 +112,11 @@ module Elexis
         end
 
         def pull
+          @doc_projects.each{
+            |prj|
+            dir = File.dirname(prj)
+            get_content_from_wiki(dir, File.basename(dir))
+          }
           @info.plugins.each{
             |id, info|
               puts "Pulling for plugin #{id}" if $VERBOSE
@@ -201,16 +213,13 @@ module Elexis
           puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE
         end
 
-        def get_from_wiki_if_exists(plugin_id, pageName)
-          content = @mw.get(pageName)
-          out_dir  = File.join(@info.workspace_dir, plugin_id, 'doc')
+        def get_content_from_wiki(out_dir, pageName)
+          puts "get_content_from_wiki page #{pageName} -> #{out_dir}" if $VERBOSE
           out_name = File.join(out_dir, pageName + '.mediawiki')
+          FileUtils.makedirs(out_dir) unless File.directory?(out_dir)
+          content = @mw.get(pageName)
           if content
-            dirname = File.dirname(out_name)
-            FileUtils.makedirs(dirname) unless File.directory?(dirname)
-            ausgabe = File.open(out_name, 'w+')
-            ausgabe.puts content
-            ausgabe.close
+            ausgabe = File.open(out_name, 'w+') { |f| f.write content }
             @mw.images(pageName).each{
               |image|
                 image = image.gsub(/[^\w\.:]/, '_')
@@ -222,6 +231,9 @@ module Elexis
             puts "Could not fetch #{pageName} from #{@mw}" unless defined?(RSpec)
           end
           content
+        end
+        def get_from_wiki_if_exists(plugin_id, pageName)
+          get_content_from_wiki(File.join(@info.workspace_dir, plugin_id, 'doc'), pageName)
         end
         def pull_docs_views(plugin)
           id = plugin.symbolicName

@@ -7,7 +7,7 @@ require "elexis/wiki/interface/workspace"
 describe 'Plugin' do
 
   before :all do
-    @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'push'))
+    @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'data', 'push'))
   end
 
   before :each do
@@ -26,15 +26,4 @@ describe 'Plugin' do
     content = workspace.mw.get('test')
     expect content != nil
   end
-  it "should show all users" do
-    workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
-    users = workspace.mw.users
-    puts "We have #{users.size} wiki users"
-    users.each{
-      |user|
-      contrib = workspace.mw.contributions(user, 10)
-      puts "#{sprintf("%2d", contrib.size)} contributions for user #{user}"
-    }
-  end if false
-
 end
