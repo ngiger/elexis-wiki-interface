@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.2)
+    elexis-wiki-interface (0.3)
       eclipse-plugin (>= 0.1)
       mediawiki-gateway
       rubyzip (< 1.0.0)
