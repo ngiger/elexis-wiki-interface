@@ -58,7 +58,6 @@ module Elexis
           @doc_projects.each{
             |prj|
             dir = File.dirname(prj)
-            get_content_from_wiki(dir, File.basename(dir))
           }
           @info.plugins.each{
             |id,plugin|
