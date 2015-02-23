@@ -72,10 +72,10 @@ module Elexis
                             last_wiki_modification = get_page_modification_time(pagename)
                             last_git_modification = get_git_modification(file)
                             if (last_wiki_modification == nil)
-                              puts "first upload#{File.basename(file)} last_git_modification is #{last_git_modification} last_wiki_modification was #{last_wiki_modification}" if $VERBOSE
+                              puts "first upload#{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
                             else
                               no_upload = (last_git_modification != nil) and (last_git_modification <= last_wiki_modification)
-                              puts "upload #{File.basename(file)} no_upload #{no_upload} as last_git_modification is #{last_git_modification} last_wiki_modification was #{last_wiki_modification}" if $VERBOSE
+                              puts "#{no_upload ? 'NO upload': 'upload'} #{pagename} as last_git_modification is #{last_git_modification} last_wiki_modification was #{last_wiki_modification}" if $VERBOSE
                               next if no_upload
                             end
                             @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
@@ -90,12 +90,13 @@ module Elexis
                                 git_mod =  get_git_modification(image)
                                 wiki_mod = get_image_modification_name(image)
                                 if wiki_mod == nil
-                                  puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod}" if $VERBOSE
+                                  puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod}" if $VERBOSE
                                 else
                                   no_upload = (git_mod != nil) and (git_mod <= wiki_mod)
-                                  puts "upload #{File.basename(image)} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod} no_upload #{no_upload.inspect}" if $VERBOSE
+                                  puts "#{no_upload ? 'NO upload': 'upload'} #{File.basename(image)} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod}" if $VERBOSE
                                   next if no_upload
                                 end
+                                begin
                                 res = @mw.upload(image, {
                                 :text => 'ein Text',
                                         :ignorewarnings => 'true',
@@ -103,6 +104,9 @@ module Elexis
                                         :comment => "Uploaded by #{File.basename(__FILE__)}",
                                         } )
                                  puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.inspect} answer is #{res[0].root.elements.first}" # if $VERBOSE
+                                rescue
+                                 puts "rescue für #{image}" # if $VERBOSE
+                                end
                 }
             end
           }
