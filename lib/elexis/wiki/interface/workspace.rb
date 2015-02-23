@@ -84,8 +84,9 @@ module Elexis
                                  |image|
                                 git_mod =  get_git_modification(image)
                                 wiki_mod = get_image_modification_name(image)
-                                puts "upload #{File.basename(image)} #{git_mod > wiki_mod} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod}" if $VERBOSE
-                                next unless git_mod > wiki_mod
+                                no_upload = git_mod and wiki_mod and (git_mod > wiki_mod)
+                                puts "upload #{File.basename(image)} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod} no_upload #{no_upload.inspect}" if $VERBOSE
+                                next if no_upload
                                 res = @mw.upload(image, {
                                 :text => 'ein Text',
                                         :ignorewarnings => 'true',
