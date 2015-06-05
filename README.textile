@@ -16,28 +16,29 @@ Ensure that you use Ruby 1.9.2 or higher (mediawiki-gateway does not support Rub
 
 Add this line to your application's Gemfile:
 
-bc.   $ gem 'elexis-wiki-interface'
+bc. $ gem 'elexis-wiki-interface'
 
 And then execute:
 
-bc.   $ bundle
+bc. $ bundle
 
 Or install it yourself as:
 
-bc.   $ gem install elexis-wiki-interface
+bc. $ gem install elexis-wiki-interface
 
 h2. Usage
 
 h3. using some built-in helpers (mainly for the jenkins-CI)
 
 Each of the helper script below should work if you have a ruby installation >= 1.9.2 and executed @gem install bundler && bundle install@ in directory where
-bc.   wiki_pull
+
+bc. wiki_pull
   wiki_pull_daily
   wiki_push
 
 h3. in a ruby script
 
-bc.  require 'elexis/wiki/interface/workspace'
+bc. require 'elexis/wiki/interface/workspace'
 require 'pp'
 workspace =  Elexis::Wiki::Interface::Workspace.new('.')
 workspace.pull # get actual mediawiki content and place it under doc inside the plugin
