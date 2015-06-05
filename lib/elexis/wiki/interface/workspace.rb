@@ -71,7 +71,7 @@ module Elexis
                             pagename = File.basename(file, '.mediawiki').capitalize
                             last_wiki_modification = get_page_modification_time(pagename)
                             last_git_modification = get_git_modification(file)
-                            if (last_wiki_modification == nil)
+                            unless last_wiki_modification
                               puts "first upload#{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
                             else
                               no_upload = (last_git_modification != nil) and (last_git_modification <= last_wiki_modification)
