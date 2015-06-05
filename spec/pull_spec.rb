@@ -5,32 +5,33 @@ require 'elexis/wiki/interface'
 require "elexis/wiki/interface/workspace"
 describe 'Plugin' do
 
-  def remove_all_mediawik
+  def remove_all_mediawiki
     files2rm = Dir.glob("#{@dataDir}/**/*.mediawiki") + Dir.glob("#{@dataDir}/**/*.png")
     FileUtils.rm(files2rm, :verbose => $VERBOSE) if files2rm.size > 0
+    system("git checkout #{@dataDir}")
   end
   before :all do
     @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'pull'))
   end
 
   before :each do
-    remove_all_mediawik
+    remove_all_mediawiki
   end
   
   after :each do
-    remove_all_mediawik
+    remove_all_mediawiki
   end
 
   it "should pull doc.de ch.elexis.core.ui" do
     # TODO: Handle http://wiki.elexis.info/Doc_de
     # TODO: http://wiki.elexis.info/Doc_de
     # Nach elexis-3-base?
-    @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'doc'))
-      workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
-      workspace.pull
-      search = "#{@dataDir}/doc_??/*.mediawiki"
-      mediawikis = Dir.glob(search)
-      expect(mediawikis.size).to eq 1
+#    @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'doc'))
+    workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
+    workspace.pull
+    search = "#{@dataDir}/?oc_??/*.mediawiki"
+    mediawikis = Dir.glob(search)
+    expect(mediawikis.size).to eq 1
   end
 
   it "should pull all mediawiki content for ch.elexis.core.ui" do
@@ -68,7 +69,11 @@ describe 'Plugin' do
       expect(Dir.glob(name).size).to eq 1
       search = "#{@dataDir}/**/doc/*.png"
       images = Dir.glob(search)
-      expect(images.size).to be >= 2
+      images.each{
+        |img|
+        expect(/:/.match(img)).to be_nil
+      }
+      expect(images.size).to be >= 1
       expect(workspace.features_missing_documentation.size).to eq 0
       name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "*mediawiki")
       expect(Dir.glob(name).size).to eq 1
@@ -78,7 +83,8 @@ describe 'Plugin' do
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
       expect(Dir.glob(name).size).to eq 1
 
-  end  #if false
+  end
+
   it "should show all users" do
     workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
     puts "We have #{workspace.mw.users.size} wiki users"

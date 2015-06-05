@@ -1,7 +1,7 @@
 #encoding: utf-8
 
 require 'eclipse/plugin'
-require 'media_wiki'
+require 'media_wiki' # TODO: port it to require 'mediawiki_api'
 require 'fileutils'
 require 'open-uri'
 require 'time'
@@ -187,7 +187,7 @@ module Elexis
 
         def shorten_wiki_image(image)
           return File.basename(image) unless File.basename(image).index(':')
-          File.basename(image).split(':')[1..-1].join(':')
+          File.basename(image).split(':')[1..-1].join(':').gsub(':', '_')
         end
 
         # http://wiki.elexis.info/api.php?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=Ch.elexis.notes:config.png&*
@@ -231,7 +231,12 @@ module Elexis
           puts "get_content_from_wiki page #{pageName} -> #{out_dir}" if $VERBOSE
           out_name = File.join(out_dir, pageName + '.mediawiki')
           FileUtils.makedirs(out_dir) unless File.directory?(out_dir)
-          content = @mw.get(pageName)
+          begin
+            content = @mw.get(pageName)
+          rescue MediaWiki::Gateway::Exception => e
+            puts "Unable to get #{pageName} for #{out_dir} from #{File.dirname(@mw.wiki_url)}"
+            return nil
+          end
           if content
             ausgabe = File.open(out_name, 'w+') { |f| f.write content }
             @mw.images(pageName).each{
