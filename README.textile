@@ -74,6 +74,8 @@ h3. Conventions
 ** a plugin plugin.name has a page plugin.name
 ** a view view.name with a localized name localized_name has a page <plugin.name>Views<localized_name>
 ** a perspective perspective.name with a localized name localized_name has a page  P_<localized_name>
+** png files should start with their plugin/feature-name followed by '_' by a unique name
+** png files resides inside the 'doc' sub-directory of each plugin/feature
 
 h3. Limitations/TODO
 

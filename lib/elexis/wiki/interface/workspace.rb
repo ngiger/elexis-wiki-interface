@@ -87,6 +87,10 @@ module Elexis
                 images_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
                 images_to_push.each{
                                  |image|
+                                if /:/.match(File.basename(image))
+                                   puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{image}"
+                                   exit
+                                end
                                 git_mod =  get_git_modification(image)
                                 wiki_mod = get_image_modification_name(image)
                                 if wiki_mod == nil
@@ -243,7 +247,7 @@ module Elexis
               |image|
                 image = image.gsub(/[^\w\.:]/, '_')
                 downloaded_image = File.join(out_dir, shorten_wiki_image(image))
-                download_image_file(image, downloaded_image)
+                download_image_file(image, downloaded_image.sub(':', ''))
                 break if defined?(RSpec) # speed up rspec
             }
           else

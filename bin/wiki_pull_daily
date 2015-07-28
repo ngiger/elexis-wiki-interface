@@ -10,6 +10,13 @@ files = Dir.glob('doc_??') +
     Dir.glob('*/doc/*.png')
     Dir.glob('*/doc/*.jpg')
     Dir.glob('*/doc/*.gif')
+files.each{
+  |file|
+  if /:/.match(File.basename(file))
+      puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{file}"
+      exit 2
+  end
+}
 system("git add -f #{files.join(' ')}")
 system("git status")
 system("git commit --all -m '#{File.basename(__FILE__)}: Added mediawiki content from #{workspace.wiki}'")
