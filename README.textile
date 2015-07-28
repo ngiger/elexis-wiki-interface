@@ -57,6 +57,7 @@ The username and password is fetched from a config.yml, which may be either
 * <current workdir>/config.yml
 
 Here is an example:
+
 bc. ---
   wiki: http://wiki.elexis.info/api.php
   password: topsecrect

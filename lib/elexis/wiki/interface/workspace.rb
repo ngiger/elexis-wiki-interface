@@ -238,7 +238,7 @@ module Elexis
             return nil
           end
           if content
-            ausgabe = File.open(out_name, 'w+') { |f| f.write content }
+            ausgabe = File.open(out_name, 'w+') { |f| f.write content.gsub(/(Image:[\w\.]+):(\w+.png)/, '\1_\2') }
             @mw.images(pageName).each{
               |image|
                 image = image.gsub(/[^\w\.:]/, '_')
