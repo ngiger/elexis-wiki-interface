@@ -72,16 +72,17 @@ module Elexis
                             last_wiki_modification = get_page_modification_time(pagename)
                             last_git_modification = get_git_modification(file)
                             unless last_wiki_modification
-                              puts "first upload#{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
+                              puts "first upload #{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
+                              @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
                             else
-                              no_upload = (last_git_modification != nil) and (last_git_modification <= last_wiki_modification)
-                              puts "#{no_upload ? 'NO upload': 'upload'} #{pagename} as last_git_modification is #{last_git_modification} last_wiki_modification was #{last_wiki_modification}" if $VERBOSE
-                              next if no_upload
+                              got = @mw.get(pagename).gsub(/\n+/,"\n")
+                              if got == to_verify
+                                puts "No changes to push for #{file}"
+                                next
+                              end
+                              @mw.edit(pagename, to_verify,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
+                              puts "Uploaded #{file} to #{pagename}" if $VERBOSE
                             end
-                            @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
-                            got = @mw.get(pagename).gsub(/\n+/,"\n")
-                            success = got == to_verify
-                            puts "Failed to upload #{file} to #{pagename}" unless success
                         }
               if to_push.size > 0 # then upload also all *.png files
                 images_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
@@ -91,25 +92,28 @@ module Elexis
                                    puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{image}"
                                    exit
                                 end
-                                git_mod =  get_git_modification(image)
-                                wiki_mod = get_image_modification_name(image)
+
+                                git_mod   = get_git_modification(image)
+                                wiki_mod  = get_image_modification_name(image)
+
                                 if wiki_mod == nil
                                   puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod}" if $VERBOSE
                                 else
-                                  no_upload = (git_mod != nil) and (git_mod <= wiki_mod)
-                                  puts "#{no_upload ? 'NO upload': 'upload'} #{File.basename(image)} as last_git_modification is #{git_mod} last_wiki_modification was #{wiki_mod}" if $VERBOSE
-                                  next if no_upload
+                                  to_verify = File.new(image, 'rb').read
+                                  got       = @mw.get(File.basename(image))
+                                  if got == to_verify
+                                    puts "nothing to upload for #{image}" if $VERBOSE
+                                    next
+                                  end
                                 end
                                 begin
-                                res = @mw.upload(image, {
-                                :text => 'ein Text',
-                                        :ignorewarnings => 'true',
-                                        :filename => File.basename(image),
-                                        :comment => "Uploaded by #{File.basename(__FILE__)}",
-                                        } )
-                                 puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.inspect} answer is #{res[0].root.elements.first}" # if $VERBOSE
-                                rescue
-                                 puts "rescue für #{image}" # if $VERBOSE
+                                  res = @mw.upload(image, 'filename' => File.basename(image))
+                                  puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.to_s}"
+                                  puts "If you received API error: code 'verification-error', info 'This file did not pass file verification'"
+                                  puts "this means that the file type and content do not match, e.g. you have a *png file but in reality it is a JPEG file."
+                                  puts "In this case convert file.png file.png fixes this problem"
+                                rescue MediaWiki::APIError => e
+                                  puts "rescue für #{image} #{e}" #  if $VERBOSE
                                 end
                 }
             end
