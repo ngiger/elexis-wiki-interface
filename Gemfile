@@ -6,7 +6,7 @@ gemspec
 
 gem 'eclipse-plugin', :git => 'https://github.com/ngiger/eclipse-plugin'
 
-group :debuggerx do
+group :debugger do
 if /^2/.match(RUBY_VERSION)
   gem 'pry-byebug'
 else

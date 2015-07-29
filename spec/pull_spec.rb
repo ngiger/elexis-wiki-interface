@@ -56,8 +56,6 @@ describe 'Plugin' do
         wiki_files = Dir.glob(search)
         puts "We have the pulled the following wiki_files\n#{wiki_files.join("\n")}"
       end
-      name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "Ch.elexis.core.application.feature.feature.group.mediawiki")
-      expect(Dir.glob(name).size).to eq 1
       name = File.join(@dataDir, "ch.elexis.core.application.feature", "Ch.elexis.core.application.feature.feature.group.mediawiki")
       expect(Dir.glob(name).size).to eq 0
       name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
@@ -75,8 +73,6 @@ describe 'Plugin' do
       }
       expect(images.size).to be >= 1
       expect(workspace.features_missing_documentation.size).to eq 0
-      name = File.join(@dataDir, "ch.elexis.core.application.feature", "doc", "*mediawiki")
-      expect(Dir.glob(name).size).to eq 1
 
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
       expect(Dir.glob(name).size).to eq 1
@@ -85,10 +81,10 @@ describe 'Plugin' do
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "Ch.elexis.icpc.mediawiki")
       expect(Dir.glob(name).size).to eq 1
       content = IO.read(name)
-      m = /(Image:[\w\.]+):(\w+.png)/.match(content)
+      m = /(Image:[\w\.]+)[:_](\w+.png)/.match(content)
       expect(m).to be_nil
-      m = /(Image:[\w\.]+)_(\w+.png)/.match(content)
-      expect(m[0]).to eq 'Image:ch.elexis.icpc_icpc0.png'
+      m = /(Image:[\w\.]+)\/(\w+.png)/.match(content)
+      expect(m[0]).to eq 'Image:ch.elexis.icpc/icpc0.png'
   end
 
   it "should show all users" do

@@ -9,7 +9,7 @@ GIT
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.4)
+    elexis-wiki-interface (0.4.1)
       eclipse-plugin (>= 0.1)
       mediawiki-gateway
       rubyzip (< 1.0.0)
@@ -82,11 +82,11 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  bundler (~> 1.5)
+  bundler (~> 1.10)
   eclipse-plugin!
   elexis-wiki-interface!
   pry-debugger
-  rake
+  rake (~> 10.0)
   rspec
   simplecov
 

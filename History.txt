@@ -1,0 +1,8 @@
+=== 0.4.1 / 29.07.2015
+
+* Verify/correct path of all references images
+
+=== 0.4 / 29.07.2015
+
+* Fixed some problems when uploading images
+

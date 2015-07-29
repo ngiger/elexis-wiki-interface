@@ -10,6 +10,47 @@ require 'yaml'
 module Elexis
   module Wiki
     module Interface
+      ImagePrefix  = /Datei:|Image:/i
+      ImagePattern = /(\[Datei:|\[Image:)([\w\.\:]*)/i
+      def Interface.fix_image_locations(filename, id)
+        return unless File.exists?(filename)
+        lines = IO.readlines(filename)
+        dirName = File.dirname(filename)
+        newLines = []
+        lines.each{
+          |line|
+          unless m =ImagePattern.match(line)
+            newLines << line
+          else
+            simpleName = File.join(dirName, m[2])
+            if File.exists?(simpleName)
+              puts "Image simpleName #{simpleName} found" if $VERBOSE
+              newLines << line
+              next
+            else
+              underscoreName = File.join(dirName, m[2].sub(/[\:\/_]/, '/'))
+              if File.exists?(underscoreName)
+                puts "Image underscoreName #{underscoreName} found" if $VERBOSE
+                newLines << line.sub(ImagePattern, "#{m[1]}#{m[2].sub(/[\:\/_]/, '/')}")
+                next
+              else
+                shortName = File.join(dirName, m[2].sub(/#{id}[_:\/]/i, ''))
+                if File.exists?(shortName)
+                  puts "Image shortName #{shortName} found" if $VERBOSE
+                  newLines << line.sub(m[2], m[2].sub(/[_:]/i, '/'))
+                  next
+                else
+                  puts "Could not find image for #{m[0]}"
+                  newLines << line.sub(ImagePattern, "#{m[1]}#{m[2].sub(':', '_')}")
+                end
+              end
+            end
+          end
+
+        }
+        File.open(filename, "w+") {|f| f.puts newLines}
+      end
+
       class Workspace
         attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation,
             :doc_project, :features, :info
@@ -109,11 +150,13 @@ module Elexis
                                 begin
                                   res = @mw.upload(image, 'filename' => File.basename(image))
                                   puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.to_s}"
-                                  puts "If you received API error: code 'verification-error', info 'This file did not pass file verification'"
-                                  puts "this means that the file type and content do not match, e.g. you have a *png file but in reality it is a JPEG file."
-                                  puts "In this case convert file.png file.png fixes this problem"
                                 rescue MediaWiki::APIError => e
                                   puts "rescue für #{image} #{e}" #  if $VERBOSE
+                                  if /verification-error/.match(e.to_s)
+                                    puts "If you received API error: code 'verification-error', info 'This file did not pass file verification'"
+                                    puts "this means that the file type and content do not match, e.g. you have a *png file but in reality it is a JPEG file."
+                                    puts "In this case convert file.png file.png fixes this problem"
+                                  end
                                 end
                 }
             end
@@ -148,6 +191,7 @@ module Elexis
           }
           @info.features.each{
             |id, info|
+              next unless /Com.actavis.medidirect/i.match(id)
               puts "Pulling for feature #{id}" if $VERBOSE
               pull_docs_features(info)
           }
@@ -172,6 +216,10 @@ module Elexis
           pageName
         end
 
+        def shorten_wiki_image(image)
+          File.basename(image.split(/[\:\/_]/)[-1])
+        end
+
         private
         def wiki_json_timestamp_to_time(json, page_or_img)
           return nil unless json
@@ -193,21 +241,17 @@ module Elexis
           puts "MediWiki #{@wiki} user #{@user} with password #{@password}" if $VERBOSE
         end
 
-        def shorten_wiki_image(image)
-          return File.basename(image) unless File.basename(image).index(':')
-          File.basename(image).split(':')[1..-1].join(':').gsub(':', '_')
-        end
-
         # http://wiki.elexis.info/api.php?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=Ch.elexis.notes:config.png&*
         def get_image_modification_name(image)
-          json_url = "#{@wiki}?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=#{shorten_wiki_image(image)}"
+          short_image = image.sub(ImagePrefix, '')
+          json_url = "#{@wiki}?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=#{short_image}"
           json = RestClient.get(json_url)
           wiki_json_timestamp_to_time(json, image)
         end
 
         # helper function, as mediawiki-gateway does not handle this situation correctly
         def download_image_file(image, downloaded_image)
-          short_image = shorten_wiki_image(image)
+          short_image = image.sub(ImagePrefix, '')
           unless File.exist? downloaded_image
             json_url = "#{@wiki}?action=query&format=json&list=allimages&ailimit=5&aiprop=url&aiprefix=#{short_image}"
             json = RestClient.get(json_url)
@@ -232,7 +276,7 @@ module Elexis
                 puts "      error was #{e.inspect}"
             end
           end
-          puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE
+          puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE and File.exists?(downloaded_image)
         end
 
         def get_content_from_wiki(out_dir, pageName)
@@ -246,14 +290,15 @@ module Elexis
             return nil
           end
           if content
-            ausgabe = File.open(out_name, 'w+') { |f| f.write content.gsub(/(Image:[\w\.]+):(\w+.png)/, '\1_\2') }
+            ausgabe = File.open(out_name, 'w+') { |f| f.write content }
             @mw.images(pageName).each{
               |image|
                 image = image.gsub(/[^\w\.:]/, '_')
                 downloaded_image = File.join(out_dir, shorten_wiki_image(image))
-                download_image_file(image, downloaded_image.sub(':', ''))
-                break if defined?(RSpec) # speed up rspec
+                download_image_file(image, downloaded_image.sub(':', '_'))
+                break if defined?(RSpec) and not /icpc/i.match(pageName) # speed up RSpec
             }
+            Elexis::Wiki::Interface.fix_image_locations(out_name, pageName)
           else
             puts "Could not fetch #{pageName} from #{@mw}" if $VERBOSE
           end

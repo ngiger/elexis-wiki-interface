@@ -12,10 +12,10 @@ describe 'Plugin' do
 
   before :each do
   end
-  
+
   it "should push a test page to the wiki.elexis.info" do
     fqdn = `hostname -f`
-    pending 'do not run push test on travis' if fqdn.match(/travis-ci.org/)
+    pending 'do not run push test on travis' if fqdn.match(/travis-ci.org/) or ENV['TRAVIS']
     hasConfig =  File.exists?('/etc/elexis-wiki-interface/config.yml') or File.exists?(File.join(Dir.pwd, 'config.yml'))
     pending 'no config file' unless hasConfig
     search = "#{@dataDir}/**/*.mediawiki"
