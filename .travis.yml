@@ -1,5 +1,9 @@
 language: ruby
 
+sudo: false
+
+cache: bundler
+
 script:
   - bundle exec rspec
   - bundle exec rake install
