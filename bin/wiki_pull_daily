@@ -19,7 +19,7 @@ files.each{
 }
 system("git add -f #{files.join(' ')}")
 system("git status")
-system("git commit --all -m '#{File.basename(__FILE__)}: Added mediawiki content from #{workspace.wiki}'")
+system("git commit --all -m '#{File.basename(__FILE__)}: #{Date.today.to_s} from #{workspace.wiki.sub(/api.php/i, '')}'")
 system("git status")
 system("git log -1")
 # system("git push")

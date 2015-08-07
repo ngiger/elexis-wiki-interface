@@ -82,9 +82,9 @@ describe 'Plugin' do
       expect(Dir.glob(name).size).to eq 1
       content = IO.read(name)
       m = /(Image:[\w\.]+)[:_](\w+.png)/.match(content)
-      expect(m).to be_nil
+      expect(m).to eq nil
       m = /(Image:[\w\.]+)\/(\w+.png)/.match(content)
-      expect(m[0]).to eq 'Image:ch.elexis.icpc/icpc0.png'
+      expect(m[0]).to eq 'Image:Ch.elexis.icpc/icpc0.png'
   end
 
   it "should show all users" do

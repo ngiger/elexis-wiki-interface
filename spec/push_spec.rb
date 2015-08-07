@@ -14,16 +14,18 @@ describe 'Plugin' do
   end
 
   it "should push a test page to the wiki.elexis.info" do
-    fqdn = `hostname -f`
-    pending 'do not run push test on travis' if fqdn.match(/travis-ci.org/) or ENV['TRAVIS']
-    hasConfig =  File.exists?('/etc/elexis-wiki-interface/config.yml') or File.exists?(File.join(Dir.pwd, 'config.yml'))
-    pending 'no config file' unless hasConfig
-    search = "#{@dataDir}/**/*.mediawiki"
-    mediawikis = Dir.glob(search)
-    expect mediawikis.size == 1
-    workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
-    workspace.push
-    content = workspace.mw.get('test')
-    expect content != nil
+    if ENV['TRAVIS']
+      puts "Skipping some tests under travis"
+    else
+      hasConfig =  File.exists?('/etc/elexis-wiki-interface/config.yml') or File.exists?(File.join(Dir.pwd, 'config.yml'))
+      pending 'no config file' unless hasConfig
+      search = "#{@dataDir}/**/*.mediawiki"
+      mediawikis = Dir.glob(search)
+      expect mediawikis.size == 1
+      workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
+      workspace.push
+      content = workspace.mw.get('test')
+      expect content != nil
+    end
   end
 end
