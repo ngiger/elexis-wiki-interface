@@ -4,4 +4,4 @@ source 'https://rubygems.org'
 gemspec
 
 
-gem 'eclipse-plugin', :git => 'https://github.com/ngiger/eclipse-plugin'
+gem 'eclipse-plugin' # , :git => 'https://github.com/ngiger/eclipse-plugin'

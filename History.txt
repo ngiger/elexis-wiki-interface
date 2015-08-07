@@ -1,3 +1,7 @@
+=== 0.4.3 / 07.08.2015
+
+* Use gem eclipse-plugin from rubygem not github
+
 === 0.4.2 / 29.07.2015
 
 * Remove and correct obsolete image with name like <id>_somename.png

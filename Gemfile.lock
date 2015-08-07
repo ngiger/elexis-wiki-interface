@@ -1,15 +1,7 @@
-GIT
-  remote: https://github.com/ngiger/eclipse-plugin
-  revision: 3304128c0deae0c1a5f8af5f7f621be5858d5395
-  specs:
-    eclipse-plugin (0.3)
-      nokogiri
-      rubyzip (< 1.0.0)
-
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.4.2)
+    elexis-wiki-interface (0.4.3)
       eclipse-plugin (>= 0.1)
       mediawiki-gateway
       rubyzip (< 1.0.0)
@@ -22,6 +14,9 @@ GEM
     docile (1.1.5)
     domain_name (0.5.24)
       unf (>= 0.0.5, < 1.0.0)
+    eclipse-plugin (0.3)
+      nokogiri
+      rubyzip (< 1.0.0)
     http-cookie (1.0.2)
       domain_name (~> 0.5)
     json (1.8.3)
@@ -66,7 +61,7 @@ PLATFORMS
 
 DEPENDENCIES
   bundler (~> 1.10)
-  eclipse-plugin!
+  eclipse-plugin
   elexis-wiki-interface!
   rake (~> 10.0)
   rspec
