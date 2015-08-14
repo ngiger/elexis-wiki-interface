@@ -1,3 +1,9 @@
+=== 0.4.4 / 14.08.2015
+
+* Check whether all features have an entry in the Matrix_3.0 page
+* Create logical link inside a doc directory. This allows the mylyn preview to work
+* Allow images without a directory in their name.
+
 === 0.4.3 / 07.08.2015
 
 * Use gem eclipse-plugin from rubygem not github

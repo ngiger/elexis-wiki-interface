@@ -42,7 +42,7 @@ describe 'ImageHandling' do
     }
   end
 
-  it "should adapt correctly the image name" do
+  it "should adapt correctly the image name being in in #{Dir.pwd}" do
     wiki_file = File.join(@dataDir, 'ch.elexis.icpc', 'doc', 'test.mediawiki')
     expect(File.exists?(wiki_file)).to eq true
     before =  ['tag_one [[Image:ch.elexis.icpc:icpc1.png|image]]',
@@ -53,19 +53,33 @@ describe 'ImageHandling' do
                 ]
     original = IO.read(wiki_file)
     before.each{|string| expect(original).to include string }
-    puts Dir.pwd
+  end
+
+  it "should adapt correctly the image name being in #{@dataDir}" do
+    wiki_file = File.join(@dataDir, 'ch.elexis.icpc', 'doc', 'test.mediawiki')
     Dir.chdir(@dataDir)
-    puts Dir.pwd
 
     Elexis::Wiki::Interface.fix_image_locations(wiki_file, 'ch.elexis.icpc')
     after =['tag_one [[Image:ch.elexis.icpc/icpc1.png|image]]',
       'tag_two [[Image:ch.elexis.icpc/icpc2.png|image]]',
-      'tag_three [[Image:ch.elexis.icpc/icpc3.png|image]]',
+      'tag_three [[Image:icpc3.png|image]]',
       'tag_four [[Datei:ch.elexis.icpc/icpc4.png|image]]',
       'tag_five [[Datei:ch.elexis.icpc/icpc5.png|image]]',
                 ]
     changed = IO.read(wiki_file)
     after.each{|string| expect(changed).to include string }
   end
+
+  it "should adapt allow the image names without an ID" do
+    wiki_file = File.join(@dataDir, 'ch.elexis.icpc', 'doc', 'test.mediawiki')
+    Dir.chdir(@dataDir)
+
+    Elexis::Wiki::Interface.fix_image_locations(wiki_file, 'ch.elexis.icpc')
+    after =['tag_three [[Image:icpc3.png|image]]',
+            ]
+    changed = IO.read(wiki_file)
+    after.each{|string| expect(changed).to include string }
+  end
+
 end
 

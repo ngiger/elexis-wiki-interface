@@ -4,12 +4,12 @@ require 'elexis/wiki/interface/workspace'
 
 workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
 workspace.pull
-workspace.show_missing(true)
 files = Dir.glob('doc_??') +
     Dir.glob('*/doc/*.mediawiki') +
     Dir.glob('*/doc/*.png')
     Dir.glob('*/doc/*.jpg')
     Dir.glob('*/doc/*.gif')
+(Dir.glob("doc_??/*") + Dir.glob('*/doc/*')).each{|f| files << f if File.symlink?(f) }
 files.each{
   |file|
   if /:/.match(File.basename(file))
@@ -17,9 +17,12 @@ files.each{
       exit 2
   end
 }
-system("git add -f #{files.join(' ')}")
-system("git status")
-system("git commit --all -m '#{File.basename(__FILE__)}: #{Date.today.to_s} from #{workspace.wiki.sub(/api.php/i, '')}'")
-system("git status")
-system("git log -1")
-# system("git push")
+if true
+  system("git add -f #{files.join(' ')}")
+  system("git status")
+  system("git commit --all -m '#{File.basename(__FILE__)}: #{Date.today.to_s} from #{workspace.wiki.sub(/api.php/i, '')}'")
+  system("git status")
+  system("git log -1")
+  # system("git push")
+end
+workspace.show_missing(true)

@@ -15,7 +15,7 @@ module Elexis
       $ws_errors = []
 
       # All images under wiki.elexis.info must have images corresponding to the following scheme
-      # directory: id of the plugin/feature (with feature.feature.group removed)
+      # directory (optional): id of the plugin/feature (with feature.feature.group removed)
       # imagename:
       # Therefore you find und http://wiki.elexis.info/index.php?title=Ch.elexis.connect.mythic&action=edit the line
       #   [[Image:ch.elexis.connect.mythic_kabel.png|image]] [fig:kabel]
@@ -24,9 +24,9 @@ module Elexis
 
       def Interface.return_canonical_image_name(pagename, filename)
         pagename = pagename.sub('.feature.feature.group', '')
-        short = File.basename(filename.clone.sub(ImagePrefix, ''))
+        short = File.basename(filename.downcase.sub(ImagePrefix, ''))
         short = short.split(':')[-1]
-        return pagename + '/' + short
+        /[:\/]/.match(filename) ? pagename + '/' + short : short
       end
 
       def Interface.fix_image_locations(filename, pagename)
@@ -45,6 +45,9 @@ module Elexis
             newLines << line
           else
             new_name = Interface.return_canonical_image_name(pagename, m[2])
+            unless new_name.eql?(File.basename(new_name))
+              FileUtils.ln_s('.', File.dirname(new_name), :verbose => true) unless File.exists?(File.dirname(new_name))
+            end
             simpleName = File.join(dirName, File.basename(new_name))
             if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size == 1
               new_line = line.sub(m[2], new_name)
@@ -78,6 +81,12 @@ module Elexis
           @features_missing_documentation     =[]
         end
         def show_missing(details = false)
+          puts
+          msg  = "Show errors for #{@info.workspace_dir}"
+          puts "-" * msg.size
+          puts msg
+          puts "-" * msg.size
+
           if views_missing_documentation.size and
               plugins_missing_documentation.size == 0 and
               features_missing_documentation.size == 0 and
@@ -197,29 +206,34 @@ module Elexis
         end
 
         def pull
+          savedDir = Dir.pwd
           @doc_projects.each{
             |prj|
             dir = File.dirname(prj)
             get_content_from_wiki(dir, File.basename(dir))
             remove_image_files_with_id(File.basename(File.dirname(prj)), info, dir)
-          }
+          } # unless defined?(RSpec)
 
           @info.plugins.each{
             |id, info|
+              # next if not defined?(RSpec) and not /ehc|icp/i.match(id)
               puts "Pulling for plugin #{id}" if $VERBOSE
               pull_docs_views(info)
               pull_docs_plugins(info)
               pull_docs_perspectives(info)
               remove_image_files_with_id(id, info)
           }
+
           @info.features.each{
             |id, info|
-              # next unless /icpc/i.match(id)
+              # next if not defined?(RSpec) and not /ehc|icp/i.match(id)
               puts "Pulling for feature #{id}" if $VERBOSE
+              check_page_in_matrix(id)
               pull_docs_features(info)
               remove_image_files_with_id(id, info)
           }
-          saved = Dir.pwd
+
+          Dir.chdir(savedDir)
         end
 
         def perspectiveToPageName(perspective)
@@ -238,6 +252,13 @@ module Elexis
           pageName = comps[0..-2].collect{|x| x.capitalize}.join + 'Views'+view.id.split('.').last.capitalize
           puts "viewToPageName for #{plugin_id}/#{view.id} is #{pageName}" if $VERBOSE
           pageName
+        end
+
+        def check_page_in_matrix(pagename, matrix_name = 'Matrix_3.0')
+          puts Dir.pwd
+          res = get_content_from_wiki('.', matrix_name)
+          return true if res.index("[[#{pagename}]]") or res.index("[[#{pagename}.feature.group]]")
+          $ws_errors << "#{matrix_name}: could not find #{pagename}"
         end
 
         private
@@ -294,9 +315,17 @@ module Elexis
                 end
               end
               if image_url
-                      File.open(downloaded_image, 'w') do |file|
-                        file.write(open(image_url).read)
-                      end
+                m = /#{downloaded_image}/i.match(image_url)
+                # downloaded_image = m[0] if m # Sometimes the filename is capitalized
+                File.open(downloaded_image, 'w') do |file|
+                  file.write(open(image_url).read)
+                end
+                files = Dir.glob(downloaded_image, File::FNM_CASEFOLD)
+                files.each{
+                  |file|
+                  next if file.eql?(downloaded_image)
+                  FileUtils.rm_f(file, :verbose => true)
+                  }
               else
                 puts "skipping image #{image} for page #{pageName}"
               end
@@ -313,6 +342,7 @@ module Elexis
           puts "get_content_from_wiki page #{pageName} -> #{out_dir}" if $VERBOSE
           out_name = File.join(out_dir, pageName + '.mediawiki')
           FileUtils.makedirs(out_dir) unless File.directory?(out_dir)
+          savedDir = Dir.pwd
           Dir.chdir(out_dir)
           begin
             content = @mw.get(pageName)
@@ -325,12 +355,13 @@ module Elexis
             @mw.images(pageName).each{
               |image|
                 download_image_file(pageName, image.gsub(' ', '_'))
-                break if defined?(RSpec) and not /icpc/i.match(pageName) # speed up RSpec
+                break if defined?(RSpec) and not /icpc|ehc/i.match(pageName) # speed up RSpec
             }
             Elexis::Wiki::Interface.fix_image_locations(out_name, pageName)
           else
             puts "Could not fetch #{pageName} from #{@mw}" if $VERBOSE
           end
+          Dir.chdir(savedDir)
           content
         end
         def pull_docs_views(plugin)
