@@ -12,6 +12,7 @@ module Elexis
     module Interface
       ImagePrefix  = /Datei:|Image:/i
       ImagePattern = /(\[Datei:|\[Image:)([\w\.\:\/]*)/i
+      TestPattern = /[\._]test[s]*$/i
       $ws_errors = []
 
       # All images under wiki.elexis.info must have images corresponding to the following scheme
@@ -65,7 +66,7 @@ module Elexis
       end
 
       class Workspace
-        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :plugins_missing_documentation, :features_missing_documentation,
+        attr_reader :info, :mw, :wiki, :views_missing_documentation, :perspectives_missing_documentation, :features_missing_documentation,
             :doc_project, :features, :info
         def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
           $ws_errors = []
@@ -77,7 +78,6 @@ module Elexis
           @info.show if $VERBOSE
           @views_missing_documentation        =[]
           @perspectives_missing_documentation =[]
-          @plugins_missing_documentation      =[]
           @features_missing_documentation     =[]
         end
         def show_missing(details = false)
@@ -88,7 +88,6 @@ module Elexis
           puts "-" * msg.size
 
           if views_missing_documentation.size and
-              plugins_missing_documentation.size == 0 and
               features_missing_documentation.size == 0 and
               perspectives_missing_documentation.size == 0
             puts "Eclipse-Workspace #{@info.workspace_dir} seems to have documented all views, features, plugins and perspectives"
@@ -97,10 +96,6 @@ module Elexis
             if views_missing_documentation.size > 0
               puts "  #{views_missing_documentation.size} views"
               puts "    #{views_missing_documentation.inspect}" if details
-            end
-            if plugins_missing_documentation.size > 0
-              puts "  #{plugins_missing_documentation.size} plugins"
-              puts "    #{plugins_missing_documentation.inspect}" if details
             end
             if features_missing_documentation.size > 0
               puts "  #{features_missing_documentation.size} features"
@@ -216,7 +211,7 @@ module Elexis
 
           @info.plugins.each{
             |id, info|
-              # next if not defined?(RSpec) and not /ehc|icp/i.match(id)
+              # next if not defined?(RSpec) and not /org.iatrix/i.match(id)
               puts "Pulling for plugin #{id}" if $VERBOSE
               pull_docs_views(info)
               pull_docs_plugins(info)
@@ -370,6 +365,7 @@ module Elexis
             |id, view|
             pageName = viewToPageName(plugin.symbolicName, view)
             content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
+            next if TestPattern.match(id)
             @views_missing_documentation << pageName unless content
           }
         end
@@ -379,6 +375,7 @@ module Elexis
             |id, perspective|
             pageName = perspectiveToPageName(perspective)
             content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
+            next if TestPattern.match(id)
             @perspectives_missing_documentation << pageName unless content
           }
         end
@@ -386,7 +383,7 @@ module Elexis
           id = plugin.symbolicName
           pageName = id.capitalize
           content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
-          @perspectives_missing_documentation << pageName unless content
+          return if TestPattern.match(id)
         end
         def pull_docs_features(feature)
           id = feature.symbolicName

@@ -1,3 +1,7 @@
+=== 0.4.5 / 14.08.2015
+
+* Don't report plugin without documenteation, as only features are required to have one
+
 === 0.4.4 / 14.08.2015
 
 * Check whether all features have an entry in the Matrix_3.0 page

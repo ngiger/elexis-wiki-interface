@@ -44,7 +44,6 @@ describe 'Plugin' do
       mediawikis = Dir.glob(search)
       expect(mediawikis.size).to be > 1
       @workspace.show_missing(true)
-      expect(@workspace.plugins_missing_documentation.size).to eq 0
       expect(@workspace.perspectives_missing_documentation.size).to be <= 1
       if $VERBOSE
         search = "#{@dataDir}/**/*.mediawiki"
