@@ -15,19 +15,22 @@ module Elexis
       TestPattern = /[\._]test[s]*$/i
       $ws_errors = []
 
-      # All images under wiki.elexis.info must have images corresponding to the following scheme
-      # directory (optional): id of the plugin/feature (with feature.feature.group removed)
-      # imagename:
-      # Therefore you find und http://wiki.elexis.info/index.php?title=Ch.elexis.connect.mythic&action=edit the line
-      #   [[Image:ch.elexis.connect.mythic_kabel.png|image]] [fig:kabel]
-      # and under http://wiki.elexis.info/index.php?title=Com.hilotec.elexis.opendocument.feature.feature.group&action=edit
-      #   [[Image:com.hilotec.elexis.opendocument/anleitung_opendocument_1.png|frame|none]]
-
       def Interface.return_canonical_image_name(pagename, filename)
         pagename = pagename.sub('.feature.feature.group', '')
         short = File.basename(filename.downcase.sub(ImagePrefix, ''))
         short = short.split(':')[-1]
         /[:\/]/.match(filename) ? pagename + '/' + short : short
+      end
+
+      def Interface.remove_image_ignoring_case(filename)
+        files = Dir.glob(filename, File::FNM_CASEFOLD)
+        return if files.size == 1
+        files.each{
+          |file|
+            next if File.basename(file).eql?(File.basename(filename))
+            cmd = "git rm -f #{file}"
+            res = system(cmd)
+        }
       end
 
       def Interface.fix_image_locations(filename, pagename)
@@ -50,19 +53,20 @@ module Elexis
               FileUtils.ln_s('.', File.dirname(new_name), :verbose => true) unless File.exists?(File.dirname(new_name))
             end
             simpleName = File.join(dirName, File.basename(new_name))
-            if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size == 1
+            if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size >= 1
               new_line = line.sub(m[2], new_name)
               newLines += new_line
+              Interface.remove_image_ignoring_case(simpleName)
             else
               next if defined?(RSpec)
-              msg =  "Could not find image for #{m[0]} searched for #{simpleName} in #{Dir.pwd}"
+              msg =  "Could not find image for #{m[0]} searched for #{simpleName} in #{Dir.pwd}. files are #{files}"
               puts msg
               $ws_errors << msg
               newLines += line.sub(ImagePattern, "#{m[1]}#{m[2].sub(':', '_')}")
             end
           end
         }
-        File.open(filename, "w") {|f| f.write newLines}
+        File.open(filename, "w") {|f| f.write newLines.gsub(/\[\[Datei:|\[\[Image:/i, '[[File:')}
       end
 
       class Workspace
@@ -195,8 +199,9 @@ module Elexis
 
         def remove_image_files_with_id(id, info, docDir = nil)
           docDir ||= File.join(@info.workspace_dir, id, 'doc')
-          files = Dir.glob(File.join(docDir, "#{id}_*png")) +
-                  Dir.glob(File.join(docDir, "#{id.capitalize}_*png"))
+          files = Dir.glob(File.join(docDir, "#{id}_*jpg"), File::FNM_CASEFOLD) +
+              Dir.glob(File.join(docDir, "#{id}_*gif"), File::FNM_CASEFOLD) +
+              Dir.glob(File.join(docDir, "#{id}_*png"), File::FNM_CASEFOLD)
           system("git rm #{files.join(' ')}") if files.size > 0
         end
 
@@ -316,11 +321,7 @@ module Elexis
                   file.write(open(image_url).read)
                 end
                 files = Dir.glob(downloaded_image, File::FNM_CASEFOLD)
-                files.each{
-                  |file|
-                  next if file.eql?(downloaded_image)
-                  FileUtils.rm_f(file, :verbose => true)
-                  }
+                Interface.remove_image_ignoring_case(downloaded_image)
               else
                 puts "skipping image #{image} for page #{pageName}"
               end

@@ -1,5 +1,7 @@
 === 0.4.6 / 15.08.2015
 
+* Replace [[Datei:|[[Image: by [[File:
+* Cleanup readme.textile
 * Avoid adding an EOL at the end of the file
 
 === 0.4.5 / 14.08.2015

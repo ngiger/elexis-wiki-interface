@@ -80,10 +80,10 @@ describe 'Plugin' do
       name = File.join(@dataDir, "ch.elexis.icpc", "doc", "Ch.elexis.icpc.mediawiki")
       expect(Dir.glob(name).size).to eq 1
       content = IO.read(name)
-      m = /(Image:[\w\.]+)[:_](\w+.png)/.match(content)
+      m = /(File:[\w\.]+)[:_](\w+.png)/.match(content)
       expect(m).to eq nil
-      m = /(Image:[\w\.]+)\/(icpc0.png)/i.match(content)
-      expect(m[0]).to eq 'Image:Ch.elexis.icpc/icpc0.png'
+      m = /(File:[\w\.]+)\/(icpc0.png)/i.match(content)
+      expect(m[0]).to eq 'File:Ch.elexis.icpc/icpc0.png'
   end
 
   it "should show all users" do
