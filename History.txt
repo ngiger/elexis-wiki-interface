@@ -1,3 +1,7 @@
+=== 0.4.8 / 15.08.2015
+
+* Push doc_de and doc_fr, too
+
 === 0.4.7 / 15.08.2015
 
 * Push features, too

@@ -113,8 +113,8 @@ module Elexis
           puts $ws_errors
           puts "Displayed #{$ws_errors.size} errors"
         end
-        def push_plugin_or_feature(id, info)
-          docDir = File.join(@info.workspace_dir, id, 'doc')
+        def push_doc_dir(id, docDir = nil)
+          docDir  ||= File.join(@info.workspace_dir, id, 'doc')
           to_push = Dir.glob("#{docDir}/*.mediawiki")
           to_push.each{
                 |file|
@@ -135,7 +135,7 @@ module Elexis
                     next
                   end
                   @mw.edit(pagename, to_verify,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
-                  puts "Uploaded #{file} to #{pagename}" if $VERBOSE
+                  puts "Uploaded #{file} to #{pagename}" # if $VERBOSE
                 end
             }
           if to_push.size > 0 # then upload also all *.png files
@@ -181,15 +181,10 @@ module Elexis
           @doc_projects.each{
             |prj|
             dir = File.dirname(prj)
+            push_doc_dir(File.basename(dir), dir)
           }
-          @info.features.each{
-            |id, info|
-              push_plugin_or_feature(id, info)
-          }
-          @info.plugins.each{
-            |id,plugin|
-              push_plugin_or_feature(id, plugin)
-          }
+          @info.features.each{ |id, info|  push_doc_dir(id) }
+          @info.plugins.each{  |id,plugin| push_doc_dir(id) }
         end
 
         def get_git_modification(file)
