@@ -1,3 +1,7 @@
+=== 0.4.7 / 15.08.2015
+
+* Push features, too
+
 === 0.4.6 / 15.08.2015
 
 * Replace [[Datei:|[[Image: by [[File:

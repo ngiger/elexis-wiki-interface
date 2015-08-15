@@ -113,6 +113,67 @@ module Elexis
           puts $ws_errors
           puts "Displayed #{$ws_errors.size} errors"
         end
+        def push_plugin_or_feature(id, info)
+          docDir = File.join(@info.workspace_dir, id, 'doc')
+          to_push = Dir.glob("#{docDir}/*.mediawiki")
+          to_push.each{
+                |file|
+                # verify that locally committed file is newer than the page in the wiki
+                # verify that the content after the push matches the local content
+                my_new_content = File.new(file).read
+                to_verify = my_new_content.gsub(/\n+/,"\n").chomp
+                pagename = File.basename(file, '.mediawiki').capitalize
+                last_wiki_modification = get_page_modification_time(pagename)
+                last_git_modification = get_git_modification(file)
+                unless last_wiki_modification
+                  puts "first upload #{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
+                  @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
+                else
+                  got = @mw.get(pagename).gsub(/\n+/,"\n")
+                  if got == to_verify
+                    puts "No changes to push for #{file}"
+                    next
+                  end
+                  @mw.edit(pagename, to_verify,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
+                  puts "Uploaded #{file} to #{pagename}" if $VERBOSE
+                end
+            }
+          if to_push.size > 0 # then upload also all *.png files
+            images_to_push = Dir.glob("#{docDir}/*.png")
+            images_to_push.each{
+                              |image|
+                            if /:/.match(File.basename(image))
+                                puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{image}"
+                                exit
+                            end
+
+                            git_mod   = get_git_modification(image)
+                            wiki_mod  = get_image_modification_name(image)
+
+                            if wiki_mod == nil
+                              puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod}" if $VERBOSE
+                            else
+                              to_verify = File.new(image, 'rb').read
+                              got       = @mw.get(File.basename(image))
+                              if got == to_verify
+                                puts "nothing to upload for #{image}" if $VERBOSE
+                                next
+                              end
+                            end
+                            begin
+                              res = @mw.upload(image, 'filename' => File.basename(image))
+                              puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.to_s}" if $VERBOSE
+                            rescue MediaWiki::APIError => e
+                              puts "rescue für #{image} #{e}" #  if $VERBOSE
+                              if /verification-error/.match(e.to_s)
+                                puts "If you received API error: code 'verification-error', info 'This file did not pass file verification'"
+                                puts "this means that the file type and content do not match, e.g. you have a *png file but in reality it is a JPEG file."
+                                puts "In this case convert file.png file.png fixes this problem"
+                              end
+                            end
+            }
+          end
+        end
         def push
           check_config_file
           raise "must define wiki with user and password in #{@config_yml}" unless @user and @password and @wiki
@@ -121,66 +182,13 @@ module Elexis
             |prj|
             dir = File.dirname(prj)
           }
+          @info.features.each{
+            |id, info|
+              push_plugin_or_feature(id, info)
+          }
           @info.plugins.each{
             |id,plugin|
-              to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.mediawiki")
-              to_push.each{
-                           |file|
-                            # verify that locally committed file is newer than the page in the wiki
-                            # verify that the content after the push matches the local content
-                            my_new_content = File.new(file).read
-                            to_verify = my_new_content.gsub(/\n+/,"\n").chomp
-                            pagename = File.basename(file, '.mediawiki').capitalize
-                            last_wiki_modification = get_page_modification_time(pagename)
-                            last_git_modification = get_git_modification(file)
-                            unless last_wiki_modification
-                              puts "first upload #{File.basename(file)} last_git_modification is #{last_git_modification}" if $VERBOSE
-                              @mw.create(pagename, my_new_content,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
-                            else
-                              got = @mw.get(pagename).gsub(/\n+/,"\n")
-                              if got == to_verify
-                                puts "No changes to push for #{file}"
-                                next
-                              end
-                              @mw.edit(pagename, to_verify,{:overwrite => true, :summary => "pushed by #{File.basename(__FILE__)}" })
-                              puts "Uploaded #{file} to #{pagename}" if $VERBOSE
-                            end
-                        }
-              if to_push.size > 0 # then upload also all *.png files
-                images_to_push = Dir.glob("#{plugin.jar_or_src}/doc/*.png")
-                images_to_push.each{
-                                 |image|
-                                if /:/.match(File.basename(image))
-                                   puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{image}"
-                                   exit
-                                end
-
-                                git_mod   = get_git_modification(image)
-                                wiki_mod  = get_image_modification_name(image)
-
-                                if wiki_mod == nil
-                                  puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod}" if $VERBOSE
-                                else
-                                  to_verify = File.new(image, 'rb').read
-                                  got       = @mw.get(File.basename(image))
-                                  if got == to_verify
-                                    puts "nothing to upload for #{image}" if $VERBOSE
-                                    next
-                                  end
-                                end
-                                begin
-                                  res = @mw.upload(image, 'filename' => File.basename(image))
-                                  puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.to_s}" if $VERBOSE
-                                rescue MediaWiki::APIError => e
-                                  puts "rescue für #{image} #{e}" #  if $VERBOSE
-                                  if /verification-error/.match(e.to_s)
-                                    puts "If you received API error: code 'verification-error', info 'This file did not pass file verification'"
-                                    puts "this means that the file type and content do not match, e.g. you have a *png file but in reality it is a JPEG file."
-                                    puts "In this case convert file.png file.png fixes this problem"
-                                  end
-                                end
-                }
-            end
+              push_plugin_or_feature(id, plugin)
           }
         end
 
