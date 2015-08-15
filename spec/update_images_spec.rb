@@ -11,7 +11,7 @@ describe 'ImageHandling' do
     @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run', 'push'))
     FileUtils.rm_rf(@dataDir)
     FileUtils.makedirs(@dataDir)
-    FileUtils.cp_r(@originDir, @dataDir, :verbose => true, :preserve => true)
+    FileUtils.cp_r(@originDir, @dataDir, :preserve => true)
   end
 
   it "should return corret canonical_names for a plugin" do
@@ -79,6 +79,21 @@ describe 'ImageHandling' do
             ]
     changed = IO.read(wiki_file)
     after.each{|string| expect(changed).to include string }
+  end
+
+  it "should not add an EOL if nothing changed" do
+    id = 'ch.elexis.core.application'
+    @originDir = File.expand_path(File.join(File.dirname(__FILE__), 'data', 'push', id))
+    @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run', 'push'))
+    FileUtils.rm_rf(@dataDir)
+    FileUtils.makedirs(@dataDir)
+    FileUtils.cp_r(@originDir, @dataDir, :preserve => true)
+    wiki_file = File.join(@dataDir, id, 'doc', 'ChElexisViewsBestellblatt.mediawiki')
+    orig_content = IO.read(wiki_file)
+    Dir.chdir(@dataDir)
+    Elexis::Wiki::Interface.fix_image_locations(wiki_file, id)
+    changed = IO.read(wiki_file)
+    expect(changed).to eql orig_content
   end
 
 end

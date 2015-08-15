@@ -35,7 +35,7 @@ module Elexis
         pagename = pagename.sub('.feature.feature.group', '')
         lines = IO.readlines(filename)
         dirName = File.dirname(filename)
-        newLines = []
+        newLines = ''
         showDetails =  $VERBOSE
         if /icpc.mediawiki/i.match(filename)
           showDetails = true
@@ -43,7 +43,7 @@ module Elexis
         lines.each{
           |line|
           unless m =ImagePattern.match(line)
-            newLines << line
+            newLines += line
           else
             new_name = Interface.return_canonical_image_name(pagename, m[2])
             unless new_name.eql?(File.basename(new_name))
@@ -52,17 +52,17 @@ module Elexis
             simpleName = File.join(dirName, File.basename(new_name))
             if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size == 1
               new_line = line.sub(m[2], new_name)
-              newLines << new_line
+              newLines += new_line
             else
               next if defined?(RSpec)
               msg =  "Could not find image for #{m[0]} searched for #{simpleName} in #{Dir.pwd}"
               puts msg
               $ws_errors << msg
-              newLines << line.sub(ImagePattern, "#{m[1]}#{m[2].sub(':', '_')}")
+              newLines += line.sub(ImagePattern, "#{m[1]}#{m[2].sub(':', '_')}")
             end
           end
         }
-        File.open(filename, "w+") {|f| f.puts newLines}
+        File.open(filename, "w") {|f| f.write newLines}
       end
 
       class Workspace
