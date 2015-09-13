@@ -1,8 +1,7 @@
 #encoding : utf-8
 require 'spec_helper'
 
-require 'elexis/wiki/interface'
-require "elexis/wiki/interface/workspace"
+require "elexis/wiki/workspace"
 
 describe 'ImageHandling' do
 

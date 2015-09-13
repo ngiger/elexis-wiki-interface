@@ -1,8 +1,8 @@
 #!/bin/env ruby
 
-require 'elexis/wiki/interface/workspace'
+require 'elexis/wiki/workspace'
 
-workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
+workspace =  Elexis::Wiki::Workspace.new(Dir.pwd)
 workspace.pull
 files = Dir.glob('doc_??') +
     Dir.glob('*/doc/*.mediawiki') +

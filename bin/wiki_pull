@@ -1,6 +1,5 @@
 #!/bin/env ruby
-require 'elexis/wiki/interface/workspace'
-
-workspace =  Elexis::Wiki::Interface::Workspace.new(Dir.pwd)
+require 'elexis/wiki/workspace'
+workspace =  Elexis::Wiki::Workspace.new(Dir.pwd)
 workspace.pull
 workspace.show_missing(true)

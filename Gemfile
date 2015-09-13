@@ -5,4 +5,4 @@ gemspec
 
 
 gem 'eclipse-plugin' # , :git => 'https://github.com/ngiger/eclipse-plugin'
-# gem 'pry-nav'
+gem 'pry-byebug'

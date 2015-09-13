@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'elexis/wiki/interface/version'
+require 'elexis/wiki/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "elexis-wiki-interface"
-  spec.version       = Elexis::Wiki::Interface::VERSION
+  spec.version       = Elexis::Wiki::VERSION
   spec.authors       = ["Niklaus Giger"]
   spec.email         = ["niklaus.giger@member.fsf.org"]
   spec.summary       = "Interface between elexis source and wiki"
@@ -19,7 +19,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.add_dependency 'rubyzip', '< 1.0.0'
   spec.add_dependency 'unicode'
-  spec.add_dependency 'mediawiki-gateway'
+  spec.add_dependency 'mediawiki-gateway'     # needed to get pages and infos about pages
+  spec.add_dependency 'mediawiki_api'         # needed to push images
   spec.add_dependency 'eclipse-plugin', '>= 0.1'
   spec.add_development_dependency "bundler", "~> 1.10"
   spec.add_development_dependency "rake", "~> 10.0"

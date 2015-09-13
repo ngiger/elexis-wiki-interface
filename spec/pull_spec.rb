@@ -1,8 +1,7 @@
 #encoding : utf-8
 require 'spec_helper'
 
-require 'elexis/wiki/interface'
-require "elexis/wiki/interface/workspace"
+require "elexis/wiki/workspace"
 describe 'Plugin' do
 
   def remove_all_mediawiki
@@ -12,7 +11,7 @@ describe 'Plugin' do
   end
   before :all do
     @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'pull'))
-    @workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
+    @workspace =  Elexis::Wiki::Workspace.new(@dataDir)
     @workspace.pull
   end
 
@@ -87,8 +86,8 @@ describe 'Plugin' do
   end
 
   it "should show all users" do
-    @workspace =  Elexis::Wiki::Interface::Workspace.new(@dataDir)
-    puts "We have #{@workspace.mw.users.size} wiki users"
+    @workspace =  Elexis::Wiki::Workspace.new(@dataDir)
+    puts "We have #{@workspace.if.users.size} wiki users"
   end unless ENV['TRAVIS']
 
   it "should check the matrix" do
