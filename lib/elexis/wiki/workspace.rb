@@ -10,6 +10,7 @@ require 'yaml'
 module Elexis
   module Wiki
     class Workspace
+      TestPattern = /[\._]test[s]*$/i
       attr_reader :info, :views_missing_documentation, :perspectives_missing_documentation, :features_missing_documentation,
           :doc_project, :features, :info,
           :if, :wiki_url, :user, :password
@@ -206,67 +207,6 @@ module Elexis
       end
 
       private
-      def wiki_json_timestamp_to_time(json, page_or_img)
-        return nil unless json
-        begin
-          m = json.match(/timestamp['"]:['"]([^'"]+)/)
-          return Time.parse(m[1]) if m
-        end
-        nil
-      end
-
-      # http://wiki.elexis.info/api.php?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=Ch.elexis.notes:config.png&*
-      def get_image_modification_name(image)
-        short_image = image.sub(ImagePrefix, '')
-        json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&iiprop=url&aiprefix=#{short_image}"
-        json = RestClient.get(json_url)
-        wiki_json_timestamp_to_time(json, image)
-      end
-
-      # helper function, as mediawiki-gateway does not handle this situation correctly
-      def download_image_file(pageName, image)
-        downloaded_image = File.basename(Interface.return_canonical_image_name(pageName, image))
-        unless File.exist? downloaded_image
-          # first search by pagename and imagename
-          json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprefix=#{pageName}&aifrom=#{image.sub(ImagePrefix, '')}"
-          json = RestClient.get(json_url)
-          unless json
-            puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
-            return
-          end
-          begin
-            answer = JSON.parse(json)
-            image_url = nil
-            image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
-            unless image_url
-              # as we did not find it search imagename only
-              json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aifrom=#{image.sub(ImagePrefix, '')}"
-              json = RestClient.get(json_url)
-              if json
-                answer = JSON.parse(json)
-                image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
-              end
-            end
-            if image_url
-              m = /#{downloaded_image}/i.match(image_url)
-              # downloaded_image = m[0] if m # Sometimes the filename is capitalized
-              File.open(downloaded_image, 'w') do |file|
-                file.write(open(image_url).read)
-              end
-              files = Dir.glob(downloaded_image, File::FNM_CASEFOLD)
-              Interface.remove_image_ignoring_case(downloaded_image)
-            else
-              puts "skipping image #{image} for page #{pageName}"
-            end
-            rescue => e
-              puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
-              puts "      was '#{json}'"
-              puts "      error was #{e.inspect}"
-          end
-        end
-        puts "Downloaded image #{downloaded_image} #{File.size(downloaded_image)} bytes" if $VERBOSE and File.exists?(downloaded_image)
-      end
-
       def get_content_from_wiki(out_dir, pageName)
         puts "get_content_from_wiki page #{pageName} -> #{out_dir}" if $VERBOSE
         out_name = File.join(out_dir, pageName + '.mediawiki')
@@ -275,7 +215,7 @@ module Elexis
         Dir.chdir(out_dir)
         begin
           content = @if.get(pageName)
-        rescue MediaWiki::Gateway::Exception => e
+        rescue
           puts "Unable to get #{pageName} for #{out_dir} from #{File.dirname(@if.wiki_url)}"
           return nil
         end
@@ -283,10 +223,10 @@ module Elexis
           ausgabe = File.open(out_name, 'w+') { |f| f.write content }
           @if.images(pageName).each{
             |image|
-              download_image_file(pageName, image.gsub(' ', '_'))
+              image_name = File.basename(image).gsub(' ', '_')
+              @if.download_image_file(image_name, pageName, image.gsub(' ', '_'))
               break if defined?(RSpec) and not /icpc|ehc/i.match(pageName) # speed up RSpec
           }
-          Elexis::Wiki::Interface.fix_image_locations(out_name, pageName)
         else
           puts "Could not fetch #{pageName} from #{@if}" if $VERBOSE
         end

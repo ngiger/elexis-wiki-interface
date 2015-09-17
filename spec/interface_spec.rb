@@ -77,6 +77,18 @@ describe 'Wiki_Interface' do
     expect(res.index('ICPC-2, die *I*nternational *')).not_to eq 0
   end
 
+  it "should download an image" do
+    image = 'icpc1.png'
+    destination = File.join(Dir::tmpdir, 'tst_picture.png')
+    FileUtils.rm_f(destination, :verbose => false)
+    res = @if.download_image_file(destination, 'ch.elexis.icpc', image)
+    expect(res).to eq nil
+    expect(File.exists?(destination)).to eq true
+    expect(File.size(destination)).not_to eq 0
+    FileUtils.rm_f(destination, :verbose => false)
+  end
+
+
   it "should show all users" do
     wiki_users = @if.users
     puts "We have #{wiki_users.size} wiki users"

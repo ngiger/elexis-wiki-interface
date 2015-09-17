@@ -11,8 +11,6 @@ require 'yaml'
 module Elexis
   module Wiki
     ImagePrefix  = /Datei:|Image:/i
-    ImagePattern = /(\[Datei:|\[Image:)([\w\.\:\/]*)/i
-    TestPattern = /[\._]test[s]*$/i
 
     class Interface
       attr_reader :user, :password, :wiki_url, :mw_gw, :mw_api
@@ -76,13 +74,6 @@ module Elexis
         end
         alias_method :upload, :upload_image
 
-      def Interface.return_canonical_image_name(pagename, filename)
-        pagename = pagename.sub('.feature.feature.group', '')
-        short = File.basename(filename.downcase.sub(ImagePrefix, ''))
-        short = short.split(':')[-1]
-        /[:\/]/.match(filename) ? pagename + '/' + short : short
-      end
-
       def Interface.remove_image_ignoring_case(filename)
         files = Dir.glob(filename, File::FNM_CASEFOLD)
         return if files.size == 1
@@ -94,40 +85,64 @@ module Elexis
         }
       end
 
-      def Interface.fix_image_locations(filename, pagename)
-        return unless File.exists?(filename)
-        pagename = pagename.sub('.feature.feature.group', '')
-        lines = IO.readlines(filename)
-        dirName = File.dirname(filename)
-        newLines = ''
-        showDetails =  $VERBOSE
-        if /icpc.mediawiki/i.match(filename)
-          showDetails = true
+      def wiki_json_timestamp_to_time(json, page_or_img)
+        return nil unless json
+        begin
+          m = json.match(/timestamp['"]:['"]([^'"]+)/)
+          return Time.parse(m[1]) if m
         end
-        lines.each{
-          |line|
-          unless m =ImagePattern.match(line)
-            newLines += line
-          else
-            new_name = Interface.return_canonical_image_name(pagename, m[2])
-            unless new_name.eql?(File.basename(new_name))
-              FileUtils.ln_s('.', File.dirname(new_name), :verbose => true) unless File.exists?(File.dirname(new_name))
-            end
-            simpleName = File.join(dirName, File.basename(new_name))
-            if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size >= 1
-              new_line = line.sub(m[2], new_name)
-              newLines += new_line
-              Interface.remove_image_ignoring_case(simpleName)
-            else
-              next if defined?(RSpec)
-              msg =  "Could not find image for #{m[0]} searched for #{simpleName} in #{Dir.pwd}. files are #{files}"
-              puts msg
-              $ws_errors << msg
-              newLines += line.sub(ImagePattern, "#{m[1]}#{m[2].sub(':', '_')}")
-            end
+        nil
+      end
+
+      # http://wiki.elexis.info/api.php?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&aiprefix=Ch.elexis.notes:config.png&*
+      def get_image_modification_name(image)
+        short_image = image.sub(ImagePrefix, '')
+        json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprop=timestamp&iiprop=url&aiprefix=#{short_image}"
+        json = RestClient.get(json_url)
+        wiki_json_timestamp_to_time(json, image)
+      end
+
+      # helper function, as mediawiki-gateway does not handle this situation correctly
+      def download_image_file(destination, pageName, image)
+        unless File.exist? destination
+          # first search by pagename and imagename
+          json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprefix=#{pageName}&aifrom=#{image.sub(ImagePrefix, '')}"
+          json = RestClient.get(json_url)
+          unless json
+            puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
+            return
           end
-        }
-        File.open(filename, "w") {|f| f.write newLines.gsub(/\[\[Datei:|\[\[Image:/i, '[[File:')}
+          begin
+            answer = JSON.parse(json)
+            image_url = nil
+            image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
+            unless image_url
+              # as we did not find it search imagename only
+              json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aifrom=#{image.sub(ImagePrefix, '')}"
+              json = RestClient.get(json_url)
+              if json
+                answer = JSON.parse(json)
+                image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
+              end
+            end
+            if image_url
+              m = /#{destination}/i.match(image_url)
+              # destination = m[0] if m # Sometimes the filename is capitalized
+              File.open(destination, 'w') do |file|
+                file.write(open(image_url).read)
+              end
+              files = Dir.glob(destination, File::FNM_CASEFOLD)
+              Interface.remove_image_ignoring_case(destination)
+            else
+              puts "skipping image #{image} for page #{pageName}"
+            end
+            rescue => e
+              puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
+              puts "      was '#{json}'"
+              puts "      error was #{e.inspect}"
+          end
+        end
+        puts "Downloaded image #{destination} #{File.size(destination)} bytes" if $VERBOSE and File.exists?(destination)
       end
     end
   end

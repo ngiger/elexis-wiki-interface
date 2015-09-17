@@ -1,0 +1,18 @@
+== Test ==
+
+Bitte ignorieren. Wird für Tests verwendet.
+
+== Ein Problem in einer Konsultation behandeln ==
+
+tag_one [[Image:ch.elexis.icpc:icpc1.png|image]]<br />
+tag_two [[Image:ch.elexis.icpc:icpc2.png|image]]<br />
+tag_three [[Image:icpc3.png|image]]<br />
+tag_four [[Datei:ch.elexis.icpc:icpc4.png|image]]<br />
+tag_png [[Datei:Ch.elexis.icpc:icpc5.png|image]]<br />
+tag_jpg [[Datei:Ch.elexis.icpc:icpc6.png|image]]<br />
+tag_gif [[Datei:Ch.elexis.icpc:icpc7.png|image]]<br />
+
+
+
+
+
