@@ -7,6 +7,7 @@ describe 'Wiki_Interface' do
   match_upload_result = /Success|Warning/i
 
   before(:all) do
+    skip 'does not work under travis-ci' if ENV['TRAVIS']
     @if = Elexis::Wiki::Interface.new
     puts @if.wiki_url
     # expect(@if.wiki_url).to match /localhost/i # we don't want to test with a real wiki

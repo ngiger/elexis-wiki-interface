@@ -17,14 +17,25 @@ module Elexis
 
       private
         def load_config_file(wiki_url)
-          possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
-          possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
-          raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
-          yaml = YAML.load_file(@config_yml)
-          @wiki_url = wiki_url
-          @wiki_url ||= defined?(RSpec) ? yaml['test_wiki'] : yaml['wiki']
-          @user = yaml['user']
-          @password = yaml['password']
+          if ENV['TRAVIS'] or true
+            @user = 'nobody'
+            @password = 'nopassword'
+            @mw_gw = MediaWiki::Gateway.new(@wiki_url)
+            @mw_api = MediawikiApi::Client.new @wiki_url
+          else
+            possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
+            possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
+            raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
+            yaml = YAML.load_file(@config_yml)
+            @wiki_url = wiki_url
+            @wiki_url ||= defined?(RSpec) ? yaml['test_wiki'] : yaml['wiki']
+            @user = yaml['user'] if yaml
+            @password = yaml['password'] if yaml
+            @mw_gw = MediaWiki::Gateway.new(@wiki_url)
+            @mw_gw.login(@user, @password)
+            @mw_api = MediawikiApi::Client.new @wiki_url
+            res = @mw_api.log_in(@user, @password)
+          end
           puts "MediWiki #{@wiki_url} user #{@user} with password #{@password}" if $VERBOSE
           wiki_url
         end
@@ -33,10 +44,6 @@ module Elexis
 
         def initialize(wiki_url=nil)
           load_config_file(wiki_url)
-          @mw_gw = MediaWiki::Gateway.new(@wiki_url)
-          @mw_gw.login(user, password)
-          @mw_api = MediawikiApi::Client.new @wiki_url
-          res = @mw_api.log_in(user, password)
           $ws_errors = []
         end
 

@@ -12,6 +12,7 @@ describe 'Plugin' do
   before :all do
     @dataDir =  File.expand_path(File.join(File.dirname(__FILE__), 'data', 'pull'))
     @workspace =  Elexis::Wiki::Workspace.new(@dataDir)
+    skip 'does not work under travis-ci' if ENV['TRAVIS']
     @workspace.pull
   end
 
