@@ -5,4 +5,6 @@ gemspec
 
 
 gem 'eclipse-plugin' # , :git => 'https://github.com/ngiger/eclipse-plugin'
-gem 'pry-byebug'
+group :debugger do
+  gem 'pry-byebug'
+end
