@@ -168,7 +168,7 @@ module Elexis
 
       def get_small_name(path)
         ext =  File.extname(path)
-        to_consider = File.basename(path, ext)
+        to_consider = File.basename(path, ext).gsub(':','-')
         if to_consider.index('.')
           part = to_consider.split('.')[-1].downcase
           if  part.split('_').size > 1

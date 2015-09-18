@@ -155,7 +155,7 @@ module Elexis
         idx = 0
         @doc_projects.each{
           |prj|
-          puts "Pulling for doc_project nr #{idx}: #{prj}" if (idx % 10) == 0
+          puts "#{@if.wiki_url} Pulling for doc_project nr #{idx}: #{prj}" if (idx % 10) == 0
           idx += 1
           dir = File.dirname(prj)
           get_content_from_wiki(dir, File.basename(dir))
@@ -166,7 +166,7 @@ module Elexis
         @info.plugins.each{
           |id, info|
             # next if not defined?(RSpec) and not /org.iatrix/i.match(id)
-            puts "Pulling for plugin nr #{idx}: #{id}" if (idx % 10) == 0
+            puts "#{@if.wiki_url} Pulling for plugin nr #{idx}: #{id}" if (idx % 10) == 0
             idx += 1
             pull_docs_views(info)
             pull_docs_plugins(info)
@@ -178,7 +178,7 @@ module Elexis
         @info.features.each{
           |id, info|
             # next if not defined?(RSpec) and not /ehc|icp/i.match(id)
-            puts "Pulling for feature nr #{idx}: #{id}" if (idx % 10) == 0
+            puts "#{@if.wiki_url} Pulling for feature nr #{idx}: #{id}" if (idx % 10) == 0
             idx += 1
             check_page_in_matrix(id)
             pull_docs_features(info)
@@ -209,7 +209,6 @@ module Elexis
       def check_page_in_matrix(pagename, matrix_name = 'Matrix_3.0')
         savedDir = Dir.pwd
         Dir.chdir(@ws_dir)
-        puts Dir.pwd
         res = get_content_from_wiki('.', matrix_name)
         return true if res.index("[[#{pagename}]]") or res.index("[[#{pagename}.feature.group]]")
         $ws_errors << "#{matrix_name}: could not find #{pagename}"
@@ -236,6 +235,7 @@ module Elexis
               image_name = File.basename(image).gsub(' ', '_')
               m = Wiki::ImagePattern.match(image_name)
               image_name = m[2] if m
+              require 'pry'; binding.pry if /Datei/.match(out_name)
               @if.download_image_file(image_name, pageName, image.gsub(' ', '_'))
 
               break if defined?(RSpec) and not /matrix|icpc|ehc/i.match(pageName) # speed up RSpec

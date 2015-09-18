@@ -200,6 +200,12 @@ describe 'ImagesCleanup' do
       cmd = 'rm -f ch.elexis.icpc_icpc1.png'
       expect(@images.actions.index(cmd) >= 0)
     end
+
+    it "should find any files with ':' in their names" do
+      search = "#{@images.rootDir}/**/*:*"
+      files = Dir.glob(search)
+      expect(files.size).to eq 0
+    end
   end
 end
 

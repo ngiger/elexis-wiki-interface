@@ -106,4 +106,10 @@ describe 'Plugin' do
     files = Dir.glob(search)
     expect(files.size).to eq 0
   end
+
+  it "should find any files with ':' in their names" do
+    search = "#{@workspace.ws_dir}/**/*:*"
+    files = Dir.glob(search)
+    expect(files.size).to eq 0
+  end
 end
