@@ -101,4 +101,9 @@ describe 'Plugin' do
     expect($ws_errors.size).to eq 1
   end
 
+  it "should not create any file containing Datei: in their name" do
+    search = "#{@workspace.ws_dir}/**/*Datei:*"
+    files = Dir.glob(search)
+    expect(files.size).to eq 0
+  end
 end

@@ -1,7 +1,7 @@
 #encoding: utf-8
-
 require 'eclipse/plugin'
 require "elexis/wiki/interface"
+require "elexis/wiki/images"
 require 'fileutils'
 require 'open-uri'
 require 'time'
@@ -12,14 +12,16 @@ module Elexis
     class Workspace
       TestPattern = /[\._]test[s]*$/i
       attr_reader :info, :views_missing_documentation, :perspectives_missing_documentation, :features_missing_documentation,
-          :doc_project, :features, :info,
+          :ws_dir, :doc_project, :features, :info,
           :if, :wiki_url, :user, :password
-      def initialize(dir, wiki = 'http://wiki.elexis.info/api.php')
-        $ws_errors = []
-        @wiki_url = wiki
+      def initialize(dir, wiki = nil)
+        $stdout.sync = true
         @if = Elexis::Wiki::Interface.new(wiki)
+        raise "must define wiki with user and password in #{@config_yml}" unless @if.user and @if.password and @if.wiki_url
+        $ws_errors = []
         @info = Eclipse::Workspace.new(dir)
         @doc_projects = Dir.glob(File.join(dir, "doc_??", ".project"))
+        @ws_dir = dir
         @info.parse_sub_dirs
         @info.show if $VERBOSE
         @views_missing_documentation        =[]
@@ -118,8 +120,6 @@ module Elexis
         end
       end
       def push
-        check_config_file
-        raise "must define wiki with user and password in #{@config_yml}" unless @user and @password and @wiki_url
         @doc_projects.each{
           |prj|
           dir = File.dirname(prj)
@@ -137,7 +137,7 @@ module Elexis
       end
 
       def get_page_modification_time(pagename)
-        json_url = "#{@wiki_url}?action=query&format=json&prop=revisions&titles=#{pagename}&rvprop=timestamp"
+        json_url = "#{@if.wiki_url}?action=query&format=json&prop=revisions&titles=#{pagename}&rvprop=timestamp"
         json = RestClient.get(json_url)
         wiki_json_timestamp_to_time(json, pagename)
       end
@@ -152,27 +152,34 @@ module Elexis
 
       def pull
         savedDir = Dir.pwd
+        idx = 0
         @doc_projects.each{
           |prj|
+          puts "Pulling for doc_project nr #{idx}: #{prj}" if (idx % 10) == 0
+          idx += 1
           dir = File.dirname(prj)
           get_content_from_wiki(dir, File.basename(dir))
           remove_image_files_with_id(File.basename(File.dirname(prj)), info, dir)
         } # unless defined?(RSpec)
 
+        idx = 0
         @info.plugins.each{
           |id, info|
             # next if not defined?(RSpec) and not /org.iatrix/i.match(id)
-            puts "Pulling for plugin #{id}" if $VERBOSE
+            puts "Pulling for plugin nr #{idx}: #{id}" if (idx % 10) == 0
+            idx += 1
             pull_docs_views(info)
             pull_docs_plugins(info)
             pull_docs_perspectives(info)
             remove_image_files_with_id(id, info)
         }
 
+        idx = 0
         @info.features.each{
           |id, info|
             # next if not defined?(RSpec) and not /ehc|icp/i.match(id)
-            puts "Pulling for feature #{id}" if $VERBOSE
+            puts "Pulling for feature nr #{idx}: #{id}" if (idx % 10) == 0
+            idx += 1
             check_page_in_matrix(id)
             pull_docs_features(info)
             remove_image_files_with_id(id, info)
@@ -200,10 +207,13 @@ module Elexis
       end
 
       def check_page_in_matrix(pagename, matrix_name = 'Matrix_3.0')
+        savedDir = Dir.pwd
+        Dir.chdir(@ws_dir)
         puts Dir.pwd
         res = get_content_from_wiki('.', matrix_name)
         return true if res.index("[[#{pagename}]]") or res.index("[[#{pagename}.feature.group]]")
         $ws_errors << "#{matrix_name}: could not find #{pagename}"
+        Dir.chdir(savedDir)
       end
 
       private
@@ -216,7 +226,7 @@ module Elexis
         begin
           content = @if.get(pageName)
         rescue
-          puts "Unable to get #{pageName} for #{out_dir} from #{File.dirname(@if.wiki_url)}"
+          puts "Unable to get #{pageName} for #{out_dir} from #{@if.wiki_url ? File.dirname(@if.wiki_url): 'nil'}"
           return nil
         end
         if content
@@ -224,8 +234,11 @@ module Elexis
           @if.images(pageName).each{
             |image|
               image_name = File.basename(image).gsub(' ', '_')
+              m = Wiki::ImagePattern.match(image_name)
+              image_name = m[2] if m
               @if.download_image_file(image_name, pageName, image.gsub(' ', '_'))
-              break if defined?(RSpec) and not /icpc|ehc/i.match(pageName) # speed up RSpec
+
+              break if defined?(RSpec) and not /matrix|icpc|ehc/i.match(pageName) # speed up RSpec
           }
         else
           puts "Could not fetch #{pageName} from #{@if}" if $VERBOSE

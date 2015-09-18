@@ -17,7 +17,7 @@ module Elexis
 
       private
         def load_config_file(wiki_url)
-          if ENV['TRAVIS'] or true
+          if ENV['TRAVIS']
             @user = 'nobody'
             @password = 'nopassword'
             @mw_gw = MediaWiki::Gateway.new(@wiki_url)

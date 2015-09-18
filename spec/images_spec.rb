@@ -4,7 +4,7 @@ require 'spec_helper'
 require "elexis/wiki/images"
 
 describe 'Images' do
-  NR_PICTURES = 18
+  NR_PICTURES = 20
 
   before :all do
     @subdir = 'images'
@@ -118,6 +118,7 @@ describe 'Images' do
 
     # now the failing ones
     it "should find same_name_but_differen_content" do
+      # skip "No example yet"
       expect(@images.dup_non_identical.size).not_to eq 0
     end
 
@@ -156,10 +157,48 @@ describe 'ImagesCleanup' do
       @images.execute_cleanup
     end
 
-    it "should find new_best_name" do
-      cmd = 'update_image images/ch.elexis.icpc/doc, elexis_logo.jpg logo.jpg'
-      expect(@images.actions.index(cmd)).not_to eq -1
-      expect(@images.actions.size).to eq 5
+    it "should change_image_name_in_mediawiki" do
+      cmd = 'change_image_name_in_mediawiki test.mediawiki kabel.png icpc-kabel.png'
+      expect(@images.actions.index(cmd) >= 0)
+    end
+
+    it "should remove obsolete symlinks" do
+      cmd = 'rm Ch.elexis.notes'
+      expect(@images.actions.index(cmd) >= 0)
+    end
+
+
+    it "should NOT mv medevit_inbox1.png" do
+      cmd = 'medevit_inbox1.png'
+      expect(@images.actions.index(cmd)).to eq nil
+    end
+
+    it "should not update to /icpc-ch.elexis.icpc_icpc1.png$/.match cmd" do
+      cmd = 'mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png anleitung_opendocument_1.png'
+      @images.actions.each {
+        |action|
+          m = /icpc-ch.elexis.icpc_icpc1.png$/.match(action)
+          expect(m).to eq nil
+      }
+    end
+
+
+    it "should mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png to anleitung_opendocument_1.png" do
+      cmd = 'mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png anleitung_opendocument_1.png'
+      expect(@images.actions.index(cmd) >= 0)
+    end
+
+    it "should find mv duplicate-images" do
+      cmd = 'mv kabel.png icpc-kabel.png'
+      expect(@images.actions.index(cmd) >= 0)
+      @images.execute_cleanup
+      cmd = 'mv kabel.png icpc-kabel.png'
+      expect(@images.actions.index(cmd) >= 0)
+    end
+
+    it "should find remove old files" do
+      cmd = 'rm -f ch.elexis.icpc_icpc1.png'
+      expect(@images.actions.index(cmd) >= 0)
     end
   end
 end

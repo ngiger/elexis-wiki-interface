@@ -3,6 +3,7 @@
 require 'eclipse/plugin'
 require 'media_wiki'
 require 'mediawiki_api'
+require 'elexis/wiki/images'
 require 'fileutils'
 require 'open-uri'
 require 'time'
@@ -71,39 +72,36 @@ module Elexis
           Dir.chdir(savedDir)
         end
 
-        def get_small_name(path)
-          File.basename(path).downcase.split(/[-_]/)[-1]
-        end
-
         def verify_best_name(picture)
-          if picture[:bestname]
+          if picture[:best_name]
             wrong_best_name = @pictures.find_all{|x| x[:best_name] == picture[:best_name] and x[:sha256] != picture[:sha256]}
-          else
-            wrong_best_name = {}
-          end
-          if wrong_best_name.size > 0
-            puts "wrong_best_name #{wrong_best_name.size} entries #{wrong_best_name}" if $VERBOSE
-            @wrong_best_name << [picture[:path], wrong_best_name.collect{|x| x[:path]} ]
-            if File.basename(picture[:path]) != picture[:best_name]
-              picture[:best_name] = File.basename(picture[:path])
-            else
+            if wrong_best_name.size > 0
+              puts "wrong_best_name #{wrong_best_name.size} entries #{wrong_best_name}" # if $VERBOSE
+              @wrong_best_name << [picture[:path], wrong_best_name.collect{|x| x[:path]} ]
               new_name = get_name_with_project(picture[:path])
-              puts "new_best_name is #{new_name} for #{picture[:path]}"
-              picture[:best_name] = new_name
+              if File.basename(picture[:path]) != picture[:best_name]
+                puts "new_best_name 1 is #{new_name} for #{picture[:path]}"
+                picture[:rule] += " path != #{new_name}"
+                picture[:best_name] = File.basename(picture[:path])
+              else
+                puts "new_best_name 2 is #{new_name} for #{picture[:path]}"
+                picture[:rule] += " name get_name_with_project"
+                picture[:best_name] = new_name
+              end
             end
-          else
-            puts "wrong_best_name is #{wrong_best_name} for #{picture[:best_name]}" if $VERBOSE
           end
         end
 
         def set_best_name(picture)
+          debug = $VERBOSE
           path = picture[:path]
           sha256 = Digest::SHA256.hexdigest(IO.read(path))
           same_sha256 = @pictures.find_all{|x| x[:sha256] == sha256}
           same_name   = @pictures.find_all{|x| x[:name] == picture[:name]}
           nrSha256 = same_name.collect{|c| get_small_name(c[:sha256])}.uniq
           if same_sha256.size == 1 and nrSha256.size == 1
-            puts "only 1 sha256 #{sha256} for #{path}" if $VERBOSE
+            puts "new_best_name 3 @short_and_sha_okay #{sha256} for #{path}" if debug
+            picture[:rule] = 'short_and_sha_okay nr_single_sha'
             @short_and_sha_okay << path
             @nr_single_sha << same_sha256
             picture[:best_name] = get_small_name(path)
@@ -111,28 +109,31 @@ module Elexis
           else
             msg = " nrSha #{sha256.size} #{sha256}"
             if same_sha256.collect{|c| c[:name]}.uniq.size == 1 and nrSha256.size == 1
-              puts "@short_and_sha_okay #{path} sha256 #{sha256} for #{same_sha256.size} files"
+              puts "@short_and_sha_okay #{path} sha256 #{sha256} for #{same_sha256.size} files" if debug
+              picture[:rule] = 'short_and_sha_okay'
               @short_and_sha_okay << path
-              picture[:best_name] = get_small_name(path)
               return
             end
             found = same_sha256.collect{|c| c[:name].downcase}.uniq
             if found.size == 1  and nrSha256.size == 1
-              puts "case_sensitives #{found}"  if $VERBOSE
+              puts "new_best_name 4 case_sensitives #{found}" if debug
+              picture[:rule] = 'case_sensitives'
               picture[:best_name] = get_small_name(path)
               return
             end
             multiple = same_sha256.collect{|c| c[:name]}.uniq
             to_reduce = same_sha256.collect{|c| get_small_name(c[:name])}.uniq
-            if to_reduce.size == 1   and nrSha256.size == 1
+            if nrSha256.size == 1
               @to_short_names[path] = to_reduce
-              puts "to_short_names #{multiple} =>  #{to_reduce} nrSha #{sha256.size} #{sha256}" if $VERBOSE
+              puts "new_best_name 5 to_short_names #{multiple} =>  #{to_reduce} nrSha #{sha256.size} #{sha256}" if debug
+              picture[:rule] = 'to_short_names'
               picture[:best_name] = get_small_name(path)
               return
             end
-            puts "multiple #{multiple} to_reduce #{to_reduce}" if $VERBOSE
+            puts "new_best_name  6 multiple #{multiple} to_reduce #{to_reduce} #{get_name_with_project(picture[:path])}" if debug
             @multiple_names[path] = same_sha256
             picture[:best_name] =  get_name_with_project(picture[:path])
+            picture[:rule] = 'multiple_names'
             return
           end
         end
@@ -161,7 +162,24 @@ module Elexis
       def get_name_with_project(path)
         dir = File.dirname(path)
         found = dir.sub(/(\.feature|[._]test.*|)\/doc/i, '').sub(/\.v\d$/, '')
-        found.split('.')[-1] + '-' + File.basename(path)
+        result = (found.split('.')[-1] + '-' + File.basename(path)).downcase
+        result
+      end
+
+      def get_small_name(path)
+        ext =  File.extname(path)
+        to_consider = File.basename(path, ext)
+        if to_consider.index('.')
+          part = to_consider.split('.')[-1].downcase
+          if  part.split('_').size > 1
+            result = part.split('_')[1..-1].join('_')
+          else
+            result = part
+          end
+        else
+          result = to_consider
+        end
+        (result + ext).downcase
       end
 
       def determine_cleanup
@@ -169,38 +187,81 @@ module Elexis
         Dir.chdir(@rootDir)
         @pictures.each{ |picture| set_best_name(picture) }
         @pictures.each{ |picture| verify_best_name(picture) }
+        @wrong_best_name = {}
         @pictures.each{ |picture| verify_best_name(picture) }
-        @dup_non_identical = @pictures.find_all{ |outer| @pictures.find_all{ |inner| inner[:best_name].eql?(outer[:best_name])}.size > 1 }
-        @new_best_name     = @pictures.find_all{ |picture| not picture[:best_name].downcase.eql?(picture[:name].downcase) }
+        @dup_non_identical = @pictures.collect{ |p| p[:path] if p[:rule] =~ /multiple/}.compact
+        @pictures.find{ |outer| @pictures.find_all{ |inner| inner[:name].eql?(outer[:name]) and not inner[:sha256].eql?(outer[:sha256])}.size > 1 }
+        @new_best_name     = @pictures.find_all{ |picture| picture[:best_name] and not picture[:best_name].downcase.eql?(picture[:name].downcase) }
         write_yml_and_csv
       ensure
         Dir.chdir(savedDir)
       end
 
+      def remove_obsolete_symlinks
+        @docs.each do
+          |docDir|
+          Dir.chdir(File.join(@rootDir, docDir))
+          project =  File.basename(File.dirname(docDir))
+          files   = [ File.symlink?(project) ? project : nil, File.symlink?(project.capitalize) ? project.capitalize : nil].compact
+          files.each do
+            |symlink|
+            if symlink and File.symlink?(symlink)
+                cmd = "rm #{symlink}"
+                @actions << cmd
+                if system("git " + cmd)
+                  puts "#{Dir.pwd} cmd #{cmd} was okay"
+                else
+                  FileUtils.rm_f(symlink, :verbose => true)
+                end
+            end
+          end
+        end
+      end
+
       def execute_cleanup
+        @actions ||= []
         savedDir = Dir.pwd
+        remove_obsolete_symlinks
         Dir.chdir(@rootDir)
         cmds = []
         @new_best_name.each{
           |picture|
           dir_name = File.dirname(picture[:path])
           Dir.chdir(File.join(@rootDir, dir_name))
-          cmds << "update_image #{dir_name}, #{picture[:name]} #{picture[:best_name]}"
           Dir.glob("*#{extension}").each  do
             |wiki_file|
           old_image_name = picture[:name]
           new_image_name = picture[:best_name]
-          cmd = "git mv #{old_image_name} #{new_image_name}"
-          if system(cmd)
-            puts "cmd #{cmd} was okay"
+          if old_image_name.index('-')
+            puts "Skipping mv #{old_image_name} #{new_image_name}"
+            next
+          end
+          cmd = "mv #{old_image_name} #{new_image_name}"
+          @actions << cmd
+          if system("git " + cmd)
+            puts "#{dir_name} cmd #{cmd} was okay"
           else
             FileUtils.mv(old_image_name, new_image_name, :verbose => true)
           end unless File.exists?(new_image_name)
+          cmd = "change_image_name_in_mediawiki #{wiki_file} #{picture[:name]} #{picture[:best_name]}"
+          # cmd = 'change_image_name_in_mediawiki test.mediawiki ch.elexis.icpc_icpc1.png icpc1.png'
+
           change_image_name_in_mediawiki wiki_file, old_image_name, new_image_name
+          @actions  << cmd
+          oldFiles = Dir.glob(old_image_name, File::FNM_CASEFOLD)
+          oldFiles.each{ |old_file|
+                         cmd = "rm -f #{old_file}"
+                       @actions  << cmd
+                        if system("git " + cmd)
+                          puts "#{dir_name} cmd #{cmd} was okay"
+                        else
+                          FileUtils.rm_f(old_file, :verbose => true)
+                        end
+                       }
         end
         }
+        @actions.uniq!
         puts cmds  if $VERBOSE
-        @actions = cmds
       ensure
         Dir.chdir(savedDir)
       end
@@ -223,7 +284,7 @@ module Elexis
         if new_image_name.downcase != File.basename(new_image_name).downcase
           raise "new_image_name #{new_image_name} may not contain a directory path"
         end
-        puts "change_image_name_in_mediawiki #{__LINE__} #{mediawiki_file}: #{old_image_name.inspect} => #{new_image_name.inspect}" if $VERBOSE
+        puts "change_image_name_in_mediawiki #{Dir.pwd}/#{mediawiki_file}: #{old_image_name.inspect} => #{new_image_name.inspect}" # if $VERBOSE
         newLines = []
         lines = IO.readlines(mediawiki_file)
         lines.each{
@@ -231,7 +292,7 @@ module Elexis
           unless m = ImagePattern.match(line)
             newLines << line
           else
-            unless old_image_name.downcase.eql?(m[2].downcase)
+            unless old_image_name.downcase.eql?(m[2].downcase) or  /\/#{old_image_name}/i.match(m[2])
               puts "change_image_name_in_mediawiki #{__LINE__}  skip #{m}" if $VERBOSE
               newLines << line
             else
