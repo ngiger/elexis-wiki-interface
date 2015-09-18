@@ -2,4 +2,8 @@
 require 'elexis/wiki/workspace'
 workspace =  Elexis::Wiki::Workspace.new(Dir.pwd)
 workspace.pull
+
+images = Elexis::Wiki::Images.new(Dir.pwd)
+images.determine_cleanup
+images.execute_cleanup
 workspace.show_missing(true)

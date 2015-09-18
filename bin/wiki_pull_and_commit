@@ -1,0 +1,39 @@
+#!/bin/env ruby
+
+require 'elexis/wiki/workspace'
+
+workspace =  Elexis::Wiki::Workspace.new(Dir.pwd)
+workspace.pull
+
+images = Elexis::Wiki::Images.new(Dir.pwd)
+images.determine_cleanup
+images.execute_cleanup
+
+files = Dir.glob('doc_??') +
+    Dir.glob('*/doc/*.mediawiki', File::FNM_CASEFOLD) +
+    Dir.glob('*/doc/*.png', File::FNM_CASEFOLD)
+    Dir.glob('*/doc/*.jpg', File::FNM_CASEFOLD)
+    Dir.glob('*/doc/*.gif', File::FNM_CASEFOLD)
+(Dir.glob("doc_??/*") + Dir.glob('*/doc/*')).each{|f| files << f if File.symlink?(f) }
+files.each{
+  |file|
+  if /:/.match(File.basename(file))
+      puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{file}"
+      exit 2
+  end
+}
+
+if (error_files = Dir.glob('**/*:*')) and error_files.size > 0
+  puts "You may not add a file containg ':' or it will break git for Windows. Remove/rename #{error_files}"
+  exit 3
+end
+
+if true
+  system("git add -f #{files.join(' ')}")
+  system("git status")
+  system("git commit --all -m '#{File.basename(__FILE__)}: #{Date.today.to_s} from #{workspace.if.wiki_url.sub(/api.php/i, '')}'")
+  system("git status")
+  system("git log -1")
+  # system("git push")
+end
+workspace.show_missing(true)
