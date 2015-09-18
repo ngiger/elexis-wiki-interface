@@ -39,6 +39,7 @@ describe 'Wiki_Interface' do
 
   it "should be possible to if.upload an @test_image_file to a path with '/'" do
     expect(File.exists?(@test_image_file))
+#        def upload_image(filename, path, comment='', options = "ignorewarnings")
     res = @if.upload("api_test/api_test2.png", @test_image_file, 'TestKommentar Niklaus')
     expect(res.class).to eq MediawikiApi::Response
     expect(res.data['result']).to match match_upload_result
@@ -49,6 +50,12 @@ describe 'Wiki_Interface' do
   it "should return all images for icpc" do
     res = @if.images('Ch.elexis.icpc')
     expect(res.size).not_to eq 0
+  end
+
+  it "should return all images for icpc" do
+    res = @if.images('At.medevit.medelexis.text.msword')
+    expect(res.size).not_to eq 0
+    res.each{|page| expect(page.index(' ')).to eq nil }
   end
 
   it "should be able to create, edit and delete a page" do
@@ -79,10 +86,10 @@ describe 'Wiki_Interface' do
   end
 
   it "should download an image" do
-    image = 'icpc1.png'
+    image = 'Elexis3.0_inst_1.jpg'
     destination = File.join(Dir::tmpdir, 'tst_picture.png')
     FileUtils.rm_f(destination, :verbose => false)
-    res = @if.download_image_file(destination, 'ch.elexis.icpc', image)
+    res = @if.download_image_file(image, destination, 'ch.elexis.icpc')
     expect(res).to eq nil
     expect(File.exists?(destination)).to eq true
     expect(File.size(destination)).not_to eq 0
@@ -95,5 +102,16 @@ describe 'Wiki_Interface' do
     puts "We have #{wiki_users.size} wiki users"
     expect wiki_users.size <= 50
     contribs = @if.contributions(wiki_users.first)
+  end
+
+  it "should download an image without a pagename" do
+    dest = 'tst.png'
+    FileUtils.rm_f(dest, :verbose => false)
+    name = 'Swelab-kabel.png'
+    res = @if.download_image_file(name, dest)
+    expect(res).to eq nil
+    expect(File.exist?(dest))
+    res = @if.download_image_file(name)
+    expect(File.size(dest)).to eq res.size
   end
 end

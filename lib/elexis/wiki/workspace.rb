@@ -93,20 +93,20 @@ module Elexis
                           end
 
                           git_mod   = get_git_modification(image)
-                          wiki_mod  = get_image_modification_name(image)
+                          wiki_mod  = @if.get_image_modification_name(File.basename(image))
 
                           if wiki_mod == nil
                             puts "first upload #{File.basename(image)} as last_git_modification is #{git_mod}" if $VERBOSE
                           else
                             to_verify = File.new(image, 'rb').read
-                            got       = @if.get(File.basename(image))
-                            if got == to_verify
+                            got       = @if.download_image_file(File.basename(image))
+                            if got and got == to_verify
                               puts "nothing to upload for #{image}" if $VERBOSE
                               next
                             end
                           end
                           begin
-                            res = @if.upload(image, 'filename' => File.basename(image))
+                            res = @if.upload(File.basename(image), image)
                             puts "res für #{image}  exists? #{File.exists?(image)} ist #{res.to_s}" if $VERBOSE
                           rescue MediaWiki::APIError => e
                             puts "rescue für #{image} #{e}" #  if $VERBOSE
@@ -131,7 +131,7 @@ module Elexis
 
       def get_git_modification(file)
         return nil unless File.exists?(file)
-        git_time = `git log -1 --pretty=format:%ai #{file}`
+        git_time = `git log -1 --pretty=format:%ai '#{file}'`
         return nil  unless git_time.length > 8
         Time.parse(git_time.chomp).utc
       end
@@ -139,7 +139,7 @@ module Elexis
       def get_page_modification_time(pagename)
         json_url = "#{@if.wiki_url}?action=query&format=json&prop=revisions&titles=#{pagename}&rvprop=timestamp"
         json = RestClient.get(json_url)
-        wiki_json_timestamp_to_time(json, pagename)
+        @if.wiki_json_timestamp_to_time(json, pagename)
       end
 
       def remove_image_files_with_id(id, info, docDir = nil)
@@ -230,13 +230,13 @@ module Elexis
         end
         if content
           ausgabe = File.open(out_name, 'w+') { |f| f.write content }
-          @if.images(pageName).each{
+          images = @if.images(pageName)
+          images.each{
             |image|
-              image_name = File.basename(image).gsub(' ', '_')
+              image_name = File.basename(image)
               m = Wiki::ImagePattern.match(image_name)
-              image_name = m[2] if m
-              require 'pry'; binding.pry if /Datei/.match(out_name)
-              @if.download_image_file(image_name, pageName, image.gsub(' ', '_'))
+              image_name = m[2] if m and not image_name.index('-')
+              @if.download_image_file(image_name, image_name, pageName)
 
               break if defined?(RSpec) and not /matrix|icpc|ehc/i.match(pageName) # speed up RSpec
           }

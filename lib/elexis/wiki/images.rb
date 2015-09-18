@@ -12,7 +12,7 @@ require 'csv'
 
 module Elexis
   module Wiki
-    ImagePattern = /(\[File:|Datei:|\[Image:)([\w\.\:\/]*)/i
+    ImagePattern = /(\[File:|Datei:|\[Image:)([ \w\.\:\/]*)/i
 
     #
     # This helper class collect information about all images used in
@@ -81,8 +81,8 @@ module Elexis
               new_name = get_name_with_project(picture[:path])
               if File.basename(picture[:path]) != picture[:best_name]
                 puts "new_best_name 1 is #{new_name} for #{picture[:path]}"
-                picture[:rule] += " path != #{new_name}"
-                picture[:best_name] = File.basename(picture[:path])
+                picture[:rule] += " path != #{picture[:best_name]} => #{new_name}"
+                picture[:best_name] = new_name
               else
                 puts "new_best_name 2 is #{new_name} for #{picture[:path]}"
                 picture[:rule] += " name get_name_with_project"
@@ -162,7 +162,7 @@ module Elexis
       def get_name_with_project(path)
         dir = File.dirname(path)
         found = dir.sub(/(\.feature|[._]test.*|)\/doc/i, '').sub(/\.v\d$/, '')
-        result = (found.split('.')[-1] + '-' + File.basename(path)).downcase
+        result = (found.split('.')[-1] + '-' + File.basename(path)).downcase.gsub(':', '-')
         result
       end
 
@@ -187,7 +187,7 @@ module Elexis
         Dir.chdir(@rootDir)
         @pictures.each{ |picture| set_best_name(picture) }
         @pictures.each{ |picture| verify_best_name(picture) }
-        @wrong_best_name = {}
+        @wrong_best_name = []
         @pictures.each{ |picture| verify_best_name(picture) }
         @dup_non_identical = @pictures.collect{ |p| p[:path] if p[:rule] =~ /multiple/}.compact
         @pictures.find{ |outer| @pictures.find_all{ |inner| inner[:name].eql?(outer[:name]) and not inner[:sha256].eql?(outer[:sha256])}.size > 1 }
@@ -202,8 +202,10 @@ module Elexis
           |docDir|
           Dir.chdir(File.join(@rootDir, docDir))
           project =  File.basename(File.dirname(docDir))
-          files   = [ File.symlink?(project) ? project : nil, File.symlink?(project.capitalize) ? project.capitalize : nil].compact
-          files.each do
+          tries = [project, project.capitalize, project.sub('.feature', ''), project.sub('.feature', '').capitalize]
+          files = []
+          tries.each{|try| files << try if File.symlink?(try) }
+          files.compact.each do
             |symlink|
             if symlink and File.symlink?(symlink)
                 cmd = "rm #{symlink}"
@@ -245,7 +247,6 @@ module Elexis
           end unless File.exists?(new_image_name)
           cmd = "change_image_name_in_mediawiki #{wiki_file} #{picture[:name]} #{picture[:best_name]}"
           # cmd = 'change_image_name_in_mediawiki test.mediawiki ch.elexis.icpc_icpc1.png icpc1.png'
-
           change_image_name_in_mediawiki wiki_file, old_image_name, new_image_name
           @actions  << cmd
           oldFiles = Dir.glob(old_image_name, File::FNM_CASEFOLD)
@@ -261,7 +262,7 @@ module Elexis
         end
         }
         @actions.uniq!
-        puts cmds  if $VERBOSE
+        puts @actions.join("\n")
       ensure
         Dir.chdir(savedDir)
       end

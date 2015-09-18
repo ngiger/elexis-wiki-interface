@@ -48,7 +48,7 @@ module Elexis
         end
 
         def images(page)
-          @mw_gw.images(page)
+          pages = @mw_gw.images(page)
         end
 
         def users
@@ -67,17 +67,28 @@ module Elexis
           @mw_api.create_page(page, content)
         end
 
-        def edit(page, text)
-          @mw_api.edit({:title => page, :text => text})
+        def edit(page, text, comment = nil)
+          @mw_api.edit({:title => page, :text => text, :comment => comment})
         end
 
         def delete(page, reason='')
           @mw_api.delete_page(page, reason)
         end
 
-        def upload_image(filename, path, comment='', options = {})
+        def upload_image(filename, path, comment='', options = "ignorewarnings")
           # fails with mediawiki 1.19 because of missing @tokens
           res = @mw_api.upload_image(filename, path, comment, options)
+          msg =  "Uploaded #{filename}"
+          unless res.data['result'] == 'Success'
+            puts "Unable to upload #{filename} #{res.data['result'] }"
+            raise "Unable to upload #{filename} #{res.data['result'] }"
+          end
+          res
+        rescue MediawikiApi::ApiError => e
+          msg =  "uploading #{filename} failed #{e}"
+          puts msg
+          puts e.backtrace.join("\n") if $VERBOSE
+          raise msg
         end
         alias_method :upload, :upload_image
 
@@ -110,10 +121,14 @@ module Elexis
       end
 
       # helper function, as mediawiki-gateway does not handle this situation correctly
-      def download_image_file(destination, pageName, image)
-        unless File.exist? destination
+      def download_image_file(image, destination = nil, pageName = nil)
+        if not destination or not File.exist? destination
           # first search by pagename and imagename
-          json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprefix=#{pageName}&aifrom=#{image.sub(ImagePrefix, '')}"
+          if pageName
+            json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=5&aiprefix=#{pageName}&aifrom=#{image.sub(ImagePrefix, '')}"
+          else
+            json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=1&aifrom=#{image.sub(File.extname(image), '')}"
+          end
           json = RestClient.get(json_url)
           unless json
             puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
@@ -132,16 +147,15 @@ module Elexis
                 image_url = answer['query'].first[1].first['url'] if answer['query'] and answer['query'].size >= 1 and answer['query'].first[1].size > 0
               end
             end
-            if image_url
-              m = /#{destination}/i.match(image_url)
-              # destination = m[0] if m # Sometimes the filename is capitalized
+            if image_url and /#{image}/i.match(image_url)
+              return open(image_url).read unless destination
               File.open(destination, 'w') do |file|
                 file.write(open(image_url).read)
               end
               files = Dir.glob(destination, File::FNM_CASEFOLD)
               Interface.remove_image_ignoring_case(destination)
             else
-              puts "skipping image #{image} for page #{pageName}"
+              puts "skipping image #{image} for page #{pageName}" if $VERBOSE
             end
             rescue => e
               puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"

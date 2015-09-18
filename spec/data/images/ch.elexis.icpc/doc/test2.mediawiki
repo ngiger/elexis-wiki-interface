@@ -11,6 +11,7 @@ tag_four [[Datei:ch.elexis.icpc:icpc4.png|image]]<br />
 tag_png [[Datei:Ch.elexis.icpc:icpc5.png|image]]<br />
 tag_jpg [[Datei:Ch.elexis.icpc:icpc6.png|image]]<br />
 tag_gif [[Datei:Ch.elexis.icpc:icpc7.png|image]]<br />
+tag_utf [[File:curabillsettings.png<U+200E>]]
 
 
 

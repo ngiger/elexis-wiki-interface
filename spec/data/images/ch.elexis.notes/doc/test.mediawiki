@@ -6,6 +6,7 @@ Bitte ignorieren. Wird für Tests verwendet.
 
 tag_one [[Image:kabel.png|image]]<br />
 tag_two[[Image:icpc1.png|image]]<br />
+tag_word [[Image:at.medevit.medelexis.text.msword:WordBriefe.png|Microsoft Word Integration in Elexis]]<br />
 
 
 
