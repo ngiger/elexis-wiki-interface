@@ -23,7 +23,7 @@ module Elexis
             @mw_gw = MediaWiki::Gateway.new(@wiki_url)
             @mw_api = MediawikiApi::Client.new @wiki_url
           else
-            possibleCfgs = ['/etc/elexis-wiki-interface/config.yml', File.join(Dir.pwd, 'config.yml'), ]
+            possibleCfgs = [File.join(Dir.pwd, 'config.yml'), '/etc/elexis-wiki-interface/config.yml', ]
             possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
             raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
             yaml = YAML.load_file(@config_yml)

@@ -1,0 +1,14 @@
+h3. Version 0.5.0 (2015-09-18)
+
+* Major cleanup, much more spec tests
+* Refactored accessing the Wiki into the new class Interface
+* Using direct json, mediawiki-gateway and mediawiki_api as I found no good gem, which does allow all stuff
+* Requires newer mediawiki (actuall 1.25.2, 1.19 does not work. Unknown how it behaves between)
+* Recognize duplicates in pictures
+* Forces renaming of old convention with '/' or ':' in picture names
+* Added pictures.csv|yml to store information about the seen picture (duplicates, etc)
+
+h3. Version 0.4.8 (2015-08-15)
+
+* Fails miserably uploading to Mediawiki 1.19
+

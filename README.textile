@@ -12,7 +12,7 @@ Copyright: 2014 (c) by Niklaus Giger <niklaus.giger@member.fsf.org>
 
 h2. Installation
 
-Ensure that you use Ruby 1.9.2 or higher (mediawiki-gateway does not support Ruby 1.8.7).
+Ensure that you use Ruby 1.9.2 or higher. Mediawiki 1.19 does not work. Mediawiki 1.25.2 works. Don't know how the versions between score.
 
 Add this line to your application's Gemfile:
 
@@ -79,9 +79,8 @@ Also we don't use the tag Datei, as this one is not supported by the Mylin Wikit
 ** a perspective perspective.name with a localized name localized_name has a page  P_<localized_name>
 ** an image file must be lowercase (files which differ only by the case will be deleted)
 ** use syntax @[[File:@, not [[Datei: or @[[Image:@
-** png files should start with their plugin/feature-name followed by '/' by a name or a globally unique name
+** png files should start with a name derived from their symbolic name, eg, molemax followed by '-' by a name or a globally unique name
 ** png files resides inside the 'doc' sub-directory of each plugin/feature
-** inside the doc directoy we create a logical link of the plugin|feature name to the directory. This allows us to edit and preview the mediawiki files using the Mylin Wikitext extension of Eclipse.
 
 h3. Limitations/TODO
 
