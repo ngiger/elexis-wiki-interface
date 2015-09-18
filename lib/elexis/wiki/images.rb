@@ -76,17 +76,23 @@ module Elexis
           if picture[:best_name]
             wrong_best_name = @pictures.find_all{|x| x[:best_name] == picture[:best_name] and x[:sha256] != picture[:sha256]}
             if wrong_best_name.size > 0
-              puts "wrong_best_name #{wrong_best_name.size} entries #{wrong_best_name}" # if $VERBOSE
+              puts "   #{wrong_best_name.size} entries #{wrong_best_name}" #if $VERBOSE
               @wrong_best_name << [picture[:path], wrong_best_name.collect{|x| x[:path]} ]
               new_name = get_name_with_project(picture[:path])
-              if File.basename(picture[:path]) != picture[:best_name]
-                puts "new_best_name 1 is #{new_name} for #{picture[:path]}"
-                picture[:rule] += " path != #{picture[:best_name]} => #{new_name}"
-                picture[:best_name] = new_name
-              else
-                puts "new_best_name 2 is #{new_name} for #{picture[:path]}"
+              if picture[:best_name] != new_name
+                puts "new_best_name 2 is #{new_name} for #{picture[:path]}" #if $VERBOSE
                 picture[:rule] += " name get_name_with_project"
                 picture[:best_name] = new_name
+              else
+                @@uniq_id ||= 0
+                new_name = '27'
+                begin
+                  @@uniq_id += 1
+                  new_name = File.dirname(picture[:path]) + "/#{@@uniq_id}_" + picture[:name]
+                end until File.exist?(new_name).eql?(false)
+                puts "new_best_name 3 is #{new_name} for #{picture[:path]}" # if $VERBOSE
+                picture[:rule] += " third #{new_name}"
+                picture[:best_name] = File.basename(new_name)
               end
             end
           end
@@ -147,6 +153,7 @@ module Elexis
         @rootDir            = rootDir
         @docDir             = docDir
         @extension          = extension
+        @add_changes_to_git = false
         @pictures           = []
         @multiple_names     = {}
         @to_short_names     = {}
@@ -210,17 +217,39 @@ module Elexis
             if symlink and File.symlink?(symlink)
                 cmd = "rm #{symlink}"
                 @actions << cmd
-                if system("git " + cmd)
-                  puts "#{Dir.pwd} cmd #{cmd} was okay"
-                else
-                  FileUtils.rm_f(symlink, :verbose => true)
-                end
+                FileUtils.rm_f(symlink, :verbose => true)
+                run_git_cmd("git rm -f --ignore-unmatch #{symlink}") if @add_changes_to_git
             end
           end
         end
       end
 
-      def execute_cleanup
+      def remove_files_with_case_sensitive_changes(file_correct_case)
+        files = Dir.glob(file_correct_case + '*', File::FNM_CASEFOLD)
+        return if files.size == 1
+        files.each{
+          |file|
+            next if File.basename(file).eql?(File.basename(file_correct_case))
+            if @add_changes_to_git
+              run_git_cmd("git rm -f #{file}")
+            else
+              FileUtils.rm_f(file)
+            end
+        }
+      end
+
+      def run_git_cmd(git_cmd)
+        return unless @add_changes_to_git
+        res = system(git_cmd)
+        unless res
+          binding.pry
+          raise "Running #{git_cmd} failed"
+        end
+        @actions  << git_cmd
+      end
+
+      def execute_cleanup(add_changes_to_git=false)
+        @add_changes_to_git = add_changes_to_git
         @actions ||= []
         savedDir = Dir.pwd
         remove_obsolete_symlinks
@@ -238,44 +267,28 @@ module Elexis
             puts "Skipping mv #{old_image_name} #{new_image_name}"
             next
           end
-          cmd = "mv #{old_image_name} #{new_image_name}"
-          @actions << cmd
-          if system("git " + cmd)
-            puts "#{dir_name} cmd #{cmd} was okay"
-          else
-            FileUtils.mv(old_image_name, new_image_name, :verbose => true)
-          end unless File.exists?(new_image_name)
           cmd = "change_image_name_in_mediawiki #{wiki_file} #{picture[:name]} #{picture[:best_name]}"
           # cmd = 'change_image_name_in_mediawiki test.mediawiki ch.elexis.icpc_icpc1.png icpc1.png'
           change_image_name_in_mediawiki wiki_file, old_image_name, new_image_name
           @actions  << cmd
           oldFiles = Dir.glob(old_image_name, File::FNM_CASEFOLD)
           oldFiles.each{ |old_file|
-                         cmd = "rm -f #{old_file}"
-                       @actions  << cmd
-                        if system("git " + cmd)
-                          puts "#{dir_name} cmd #{cmd} was okay"
+                        if @add_changes_to_git
+                          run_git_cmd("git rm -f --ignore-unmatch #{old_file}") if File.exist?(old_file)
                         else
                           FileUtils.rm_f(old_file, :verbose => true)
+                          @actions  << "rm -f #{old_file}"
                         end
                        }
         end
         }
+        Dir.chdir(@rootDir)
+        # Add all pictures which were downloaded and still have the same name
+        @pictures.each { |picture| run_git_cmd("git add -f #{picture[:path]}") if File.exist?(picture[:path]) }
         @actions.uniq!
         puts @actions.join("\n")
       ensure
         Dir.chdir(savedDir)
-      end
-
-      def remove_image_ignoring_case(filename)
-        files = Dir.glob(filename, File::FNM_CASEFOLD)
-        return if files.size == 1
-        files.each{
-          |file|
-            next if File.basename(file).eql?(File.basename(filename))
-            cmd = "git rm -f #{file}"
-            res = system(cmd)
-        }
       end
 
       # Helper for scripts
@@ -285,6 +298,12 @@ module Elexis
         if new_image_name.downcase != File.basename(new_image_name).downcase
           raise "new_image_name #{new_image_name} may not contain a directory path"
         end
+        if @add_changes_to_git
+          run_git_cmd("git add #{old_image_name} && git mv #{old_image_name} #{new_image_name}")
+        elsif @actions
+          @actions << "mv #{old_image_name} #{new_image_name}"
+          FileUtils.mv(old_image_name, new_image_name, :verbose => true)
+        end unless File.exists?(new_image_name)
         puts "change_image_name_in_mediawiki #{Dir.pwd}/#{mediawiki_file}: #{old_image_name.inspect} => #{new_image_name.inspect}" # if $VERBOSE
         newLines = []
         lines = IO.readlines(mediawiki_file)
@@ -300,6 +319,7 @@ module Elexis
               dirName = File.dirname(mediawiki_file)
               simpleName = File.join(dirName, File.basename(new_image_name))
               if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size >= 1
+              # if files = (Dir.glob(simpleName, File::FNM_CASEFOLD) +Dir.glob(old_image_name, File::FNM_CASEFOLD)) and files.size >= 1
                 new_line = line.sub(m[2], new_image_name)
                 puts "change_image_name_in_mediawiki #{__LINE__}  #{line} aus #{m[2]} mit #{new_image_name}" if $VERBOSE
                 newLines << new_line
@@ -311,6 +331,7 @@ module Elexis
           end
         }
         File.open(mediawiki_file, "w") {|f| f.write newLines.join.gsub(/\[\[Datei:|\[\[Image:/i, '[[File:')}
+        run_git_cmd("git add #{mediawiki_file}")
       end
     end
   end

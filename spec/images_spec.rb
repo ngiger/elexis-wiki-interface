@@ -139,9 +139,10 @@ describe 'Images' do
   end
 end
 
+
 describe 'ImagesCleanup' do
 
-  before :all do
+  def setup_run
     @subdir = 'images'
     @originDir = File.expand_path(File.join(File.dirname(__FILE__), 'data', @subdir))
     @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run', @subdir))
@@ -151,8 +152,27 @@ describe 'ImagesCleanup' do
     @images = Elexis::Wiki::Images.new(@dataDir)
   end
 
+  before :all do
+    setup_run
+  end
+
+  describe "execute_cleanup with git" do
+    before(:all) do
+      setup_run
+      system("git init #{@dataDir}")
+      @images.determine_cleanup
+      @images.execute_cleanup(true)
+    end
+
+    it "should add Icpc8.png and icpc1.png" do
+      expect(@images.actions.index("git add -f images/ch.elexis.icpc/doc/icpc1.png")).not_to eq nil
+      expect(@images.actions.index("git add -f images/ch.elexis.icpc/doc/Icpc8.png")).not_to eq nil
+    end
+  end
+
   describe "execute_cleanup" do
     before(:all) do
+      setup_run
       @images.determine_cleanup
       @images.execute_cleanup
     end
@@ -173,18 +193,9 @@ describe 'ImagesCleanup' do
       expect(@images.actions.index(cmd)).to eq nil
     end
 
-    it "should not update to /icpc-ch.elexis.icpc_icpc1.png$/.match cmd" do
-      cmd = 'mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png anleitung_opendocument_1.png'
-      @images.actions.each {
-        |action|
-          m = /icpc-ch.elexis.icpc_icpc1.png$/.match(action)
-          expect(m).to eq nil
-      }
-    end
-
-
     it "should mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png to anleitung_opendocument_1.png" do
       cmd = 'mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png anleitung_opendocument_1.png'
+      puts @images.actions.join("\n")
       expect(@images.actions.index(cmd) >= 0)
     end
 
@@ -205,6 +216,20 @@ describe 'ImagesCleanup' do
       search = "#{@images.rootDir}/**/*:*"
       files = Dir.glob(search)
       expect(files.size).to eq 0
+    end
+    it "should remove_files_with_case_sensitive_changes" do
+      lowercase = "#{@images.rootDir}/test_lower_case.png"
+      up_case = "#{@images.rootDir}/TEST_LOWER_CASE.png"
+      capitalized = "#{@images.rootDir}/Test_lower_case.png"
+      [ lowercase, up_case, capitalized].each {
+        |file|
+          system("touch #{file}")
+          expect(File.exist?(file))
+      }
+      @images.remove_files_with_case_sensitive_changes(lowercase)
+      expect(File.exist?(lowercase))
+      expect(File.exist?(up_case)).to eq false
+      expect(File.exist?(capitalized)).to eq false
     end
   end
 end

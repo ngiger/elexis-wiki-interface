@@ -7,7 +7,7 @@ workspace.pull
 
 images = Elexis::Wiki::Images.new(Dir.pwd)
 images.determine_cleanup
-images.execute_cleanup
+images.execute_cleanup(true) # adds changes via git add
 
 files = Dir.glob('doc_??') +
     Dir.glob('*/doc/*.mediawiki', File::FNM_CASEFOLD) +
@@ -29,7 +29,6 @@ if (error_files = Dir.glob('**/*:*')) and error_files.size > 0
 end
 
 if true
-  system("git add -f #{files.join(' ')}")
   system("git status")
   system("git commit --all -m '#{File.basename(__FILE__)}: #{Date.today.to_s} from #{workspace.if.wiki_url.sub(/api.php/i, '')}'")
   system("git status")

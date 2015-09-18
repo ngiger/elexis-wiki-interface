@@ -92,17 +92,6 @@ module Elexis
         end
         alias_method :upload, :upload_image
 
-      def Interface.remove_image_ignoring_case(filename)
-        files = Dir.glob(filename, File::FNM_CASEFOLD)
-        return if files.size == 1
-        files.each{
-          |file|
-            next if File.basename(file).eql?(File.basename(filename))
-            cmd = "git rm -f #{file}"
-            res = system(cmd)
-        }
-      end
-
       def wiki_json_timestamp_to_time(json, page_or_img)
         return nil unless json
         begin
@@ -153,7 +142,6 @@ module Elexis
                 file.write(open(image_url).read)
               end
               files = Dir.glob(destination, File::FNM_CASEFOLD)
-              Interface.remove_image_ignoring_case(destination)
             else
               puts "skipping image #{image} for page #{pageName}" if $VERBOSE
             end
