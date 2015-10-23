@@ -33,7 +33,7 @@ h3. using some built-in helpers (mainly for the jenkins-CI)
 Each of the helper script below should work if you have a ruby installation >= 1.9.2 and executed @gem install bundler && bundle install@ in directory where
 
 bc. wiki_pull
-  wiki_pull_daily
+  wiki_pull_and_commit
   wiki_push
 
 h3. in a ruby script

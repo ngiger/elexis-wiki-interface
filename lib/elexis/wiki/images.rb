@@ -43,11 +43,15 @@ module Elexis
           @docs = Dir.glob('**/doc').reject{|x| x.match(/(^vendor|\/vendor)\//) } # doc_fr is mostly a duplicate of doc_de
           @docs.each{
             |doc_dir|
-            pngs = Dir.glob("#{doc_dir}/**/*.{png,jpg}")
+            pngs = Dir.glob("#{doc_dir}/**/*.{png,jpg}", File::FNM_CASEFOLD)
             puts "#{doc_dir} has #{pngs.size} png" if $VERBOSE
             next if pngs.size == 0
             pngs.each {
                       |png|
+                      if File.size(png) == 0
+                        FileUtils.rm_f(png, :verbose => true)
+                        next
+                      end
                       sha256 = Digest::SHA256.hexdigest(IO.read(png))
                       pict = { :sha256 => sha256,
                                :name => File.basename(png),
@@ -58,6 +62,7 @@ module Elexis
             # break if pngs.size > 1
           }
           @sha_2_png = {}
+          @pictures.uniq! { |elem| elem[:path].downcase }
           @pictures.each {
             |picture|
             if @sha_2_png[picture[:sha256]]
@@ -242,7 +247,6 @@ module Elexis
         return unless @add_changes_to_git
         res = system(git_cmd)
         unless res
-          binding.pry
           raise "Running #{git_cmd} failed"
         end
         @actions  << git_cmd
