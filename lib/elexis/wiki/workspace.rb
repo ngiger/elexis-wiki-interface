@@ -236,8 +236,13 @@ module Elexis
               image_name = File.basename(image)
               m = Wiki::ImagePattern.match(image_name)
               image_name = m[2] if m and not image_name.index('-')
-              @if.download_image_file(image_name, image_name, pageName)
-
+              begin
+                  @if.download_image_file(image_name, image_name, pageName)
+              rescue => e
+                msg = "Failed download #{image_name}"
+                puts msg
+                $ws_errors << msg
+              end
               break if defined?(RSpec) and not /matrix|icpc|ehc/i.match(pageName) # speed up RSpec
           }
         else

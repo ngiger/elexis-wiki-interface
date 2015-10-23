@@ -4,7 +4,7 @@ require 'spec_helper'
 require "elexis/wiki/images"
 
 describe 'Images' do
-  NR_PICTURES = 23
+  NR_PICTURES = 22
 
   before :all do
     @subdir = 'images'

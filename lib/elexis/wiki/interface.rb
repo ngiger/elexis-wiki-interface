@@ -48,7 +48,7 @@ module Elexis
         end
 
         def images(page)
-          pages = @mw_gw.images(page)
+          imgs = @mw_gw.images(page).collect{|x| x.gsub(' ','_') }
         end
 
         def users
@@ -118,10 +118,20 @@ module Elexis
           else
             json_url = "#{@wiki_url}?action=query&format=json&list=allimages&ailimit=1&aifrom=#{image.sub(File.extname(image), '')}"
           end
-          json = RestClient.get(json_url)
-          unless json
-            puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
-            return
+          begin
+            json = RestClient.get(json_url)
+            unless json
+              msg = "Could not fetch for image #{image} for #{pageName} using #{json_url}"
+              puts "JSON: #{msg}"
+              $ws_errors << msg
+              return
+            end
+          rescue => e
+            msg =  "download_image_file #{image} failed #{e}"
+            puts msg
+            puts e.backtrace.join("\n") if $VERBOSE
+            $ws_errors << msg
+            raise msg
           end
           begin
             answer = JSON.parse(json)
