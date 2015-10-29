@@ -1,0 +1,17 @@
+== Test ==
+
+Bitte ignorieren. Wird für Tests verwendet.
+
+== Tageagenda ==
+
+tag_one [[Image:Ch.elexis.agenda:Agenda2.png|image]]<br />
+tag_two [[Image:ch.elexis.agenda:Agenda_2.png|frame|none]]<br />
+tag_three [[Image:Agenda2.png|image]]<br />
+
+
+
+
+
+
+
+

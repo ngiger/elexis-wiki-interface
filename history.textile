@@ -1,3 +1,8 @@
+h3. Version 0.5.3 (2015-10-29)
+
+* Remove dummy UTF-8 characters
+* Fix mediawiki files which reference images containing '/' and ':'
+
 h3. Version 0.5.2 (2015-10-29)
 
 * Correctly rename picture with ':' and '/'.

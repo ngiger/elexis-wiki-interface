@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.5.2)
+    elexis-wiki-interface (0.5.3)
       eclipse-plugin (>= 0.1)
       mediawiki-gateway
       mediawiki_api

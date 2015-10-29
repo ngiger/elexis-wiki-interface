@@ -4,8 +4,9 @@ require 'spec_helper'
 require "elexis/wiki/images"
 
 describe 'Images' do
-  NR_PICTURES = 23
-  NR_ELEMS_IN_IMAGE_PATTERN = 4
+  NR_PICTURES = 24
+  NR_ELEMS_IN_IMAGE_PATTERN = 3
+  NR_ELEMS_IN_IMAGE_WITH_SLASH_PATTERN = 4
 
   before :all do
     @subdir = 'images'
@@ -19,6 +20,14 @@ describe 'Images' do
 
   after :all do
 #    FileUtils.rm_rf(@dataDir)
+  end
+
+  it "should refuse to change the image name in a mediawiki file when we find no corresponding image file" do
+    wiki_file = File.join(@dataDir, @subdir, 'ch.elexis.icpc', 'doc', 'test2.mediawiki')
+    old_picture_name = 'ch.elexis.icpc:icpc4.png'
+    expect(IO.read(wiki_file)).to include old_picture_name
+    expect(File.exist?(wiki_file)).to eq true
+    expect { @images.change_image_name_in_mediawiki(wiki_file, old_picture_name, 'icpc_should_not_exist.png')}.to raise_error(RuntimeError, /Could not find image/)
   end
 
   it "should create the pictures.yml and .csv file" do
@@ -42,15 +51,17 @@ describe 'Images' do
   end
 
   it "should match picture names with a /" do
-    res = Elexis::Wiki::ImagePattern.match('[[File:At.medevit.elexis.dbcheck/dbcleaningui.png|frame|none]]')
-    expect(res.size).to eq NR_ELEMS_IN_IMAGE_PATTERN
-    expect(res[2]).to eq 'dbcleaningui.png'
+    res = Elexis::Wiki::ImageWithSlashPattern.match('[[File:At.medevit.elexis.dbcheck/dbcleaningui.png|frame|none]]')
+    expect(res.size).to eq NR_ELEMS_IN_IMAGE_WITH_SLASH_PATTERN
+    expect(res[2]).to eq 'At.medevit.elexis.dbcheck/'
+    expect(res[3]).to eq 'dbcleaningui.png'
   end
 
   it "should match picture doc_de/settings_agenda-druck1.png" do
-    res = Elexis::Wiki::ImagePattern.match('[[File:doc_de/settings_agenda-druck1.png|image]]<br />')
-    expect(res.size).to eq NR_ELEMS_IN_IMAGE_PATTERN
-    expect(res[2]).to eq 'settings_agenda-druck1.png'
+    res = Elexis::Wiki::ImageWithSlashPattern.match('[[File:doc_de/settings_agenda-druck1.png|image]]<br />')
+    expect(res.size).to eq NR_ELEMS_IN_IMAGE_WITH_SLASH_PATTERN
+    expect(res[2]).to eq 'doc_de/'
+    expect(res[3]).to eq 'settings_agenda-druck1.png'
   end
 
   it "should match picture File:dbcleaningui.png" do
@@ -61,6 +72,7 @@ describe 'Images' do
 
   examples =  { 'doc_de/settings_agenda-druck1.png' => 'settings_agenda-druck1.png',
                 'doc_de/settingsAgendaDruck1.png'   => 'settings_agenda_druck1.png',
+                'Ch.elexis.privatrechnung/doc/privatrechnung-3.png' => 'privatrechnung-3.png',
                 'CurabillWarning1.png'              => 'curabill_warning1.png',
                 'ch.elexis.icpc/Icpc1.png'          => 'icpc-1.png',
                 }
@@ -79,7 +91,6 @@ describe 'Images' do
   end
 
   def check_rename(wiki_file, old_picture_name, new_picture_name, expected_new_line)
-    expect(IO.read(wiki_file)).to include old_picture_name
     @images.change_image_name_in_mediawiki(wiki_file, old_picture_name, new_picture_name)
     changed = IO.read(wiki_file)
     expect(changed).to include "tag_one"
@@ -100,6 +111,7 @@ describe 'Images' do
       'org.iatrix.tests/doc/test.png' => 'iatrix-test.png',
       'org.iatrix.tests/doc/test.jpg' => 'iatrix-test.jpg',
       'org.iatrix_tests/doc/test.gif' => 'iatrix-test.gif',
+      'ch.elexis.connect.abxmicros/doc/abxmicros-kabel.png' => 'abxmicros-kabel.png',
       }
     tests.each {
       |path, expected|
@@ -113,9 +125,10 @@ describe 'Images' do
   rename_tests = {
 #     'Ch.elexis.icpc:Icpc2.png' => [ 'icpc2.png', 'tag_two [[File:icpc-2.png|image]]'],
      'Ch.elexis.icpc:icpc5.png' => [ 'icpc5.png', 'tag_frame_none [[File:icpc5.png|frame|none]]'],
-     'Ch.elexis.icpc:icpc5.png' => [ 'icpc5.png', 'tag_png [[File:icpc5.png|image]]'],
-     'Ch.elexis.icpc:icpc6.png' => [ 'elexis_logo.jpg', 'tag_jpg [[File:elexis_logo.jpg|image]]'],
-     'Ch.elexis.icpc:icpc7.png' => [ 'disposan.gif', 'tag_gif [[File:disposan.gif|image]]'],
+     'ch.elexis.icpc:icpc5.png' => [ 'icpc5.png', 'tag_png [[File:icpc5.png|image]]<br />'],
+     'Ch.elexis.icpc:icpc6.png' => [ 'elexis_logo.jpg', 'tag_jpg [[File:icpc6.png|image]]'],
+     'Ch.elexis.icpc:icpc7.png' => [ 'disposan.gif', 'tag_gif [[File:icpc7.png|image]]'],
+     'Ch.elexis.icpc/favicon_green.png' => [ 'favicon_green.png', 'tag_slash [[File:favicon_green.png|image]]<br />'],
     }
   rename_tests.each {
               |old_picture_name, params|
@@ -134,14 +147,6 @@ describe 'Images' do
     @images.change_image_name_in_mediawiki(wiki_file, old_picture_name, new_picture_name)
     content = IO.read(wiki_file)
     expect(content).to include 'kabel.png]'
-  end
-
-  it "should refuse to change the image name in a mediawiki file when we find no corresponding image file" do
-    wiki_file = File.join(@dataDir, @subdir, 'ch.elexis.icpc', 'doc', 'test2.mediawiki')
-    expect(File.exist?(wiki_file)).to eq true
-    old_picture_name = 'ch.elexis.icpc:icpc4.png'
-    expect(IO.read(wiki_file)).to include old_picture_name
-    expect { @images.change_image_name_in_mediawiki(wiki_file, old_picture_name, 'icpc_should_not_exist.png')}.to raise_error(RuntimeError, /Could not find image/)
   end
 
   checks = {
@@ -220,6 +225,23 @@ describe 'ImagesCleanup' do
       @images.execute_cleanup(true)
     end
 
+    it "should fix old names in" do
+      wiki_file = File.join(@dataDir, @subdir, 'ch.elexis.agenda', 'doc', 'agenda.mediawiki')
+      expect(File.exist?(wiki_file)).to eq true
+      @images.cleanup_mediawikis
+      content = IO.read(wiki_file)
+      expect(content).to include 'tag_one [[File:agenda-2.png|image]]<br />'
+      expect(content).to include 'tag_three [[File:agenda-2.png|image]]<br />'
+      expect(content).to include 'tag_two [[File:agenda-2.png|frame|none]]<br />'
+    end
+
+    it "should remove pseudo UTF-8 chars like <U+200E>" do
+      wiki_file =  File.join(@dataDir, @subdir, 'ch.elexis.icpc', 'doc', 'test2.mediawiki')
+      content = IO.read(wiki_file)
+      expect(File.exist?(wiki_file)).to eq true
+      expect(/(<U\+\h\h\h\h>)/.match(content)).to be nil
+    end
+
     it "should add icpc-8.png and icpc-1.png" do
       expect(@images.actions.index("git add -f images/ch.elexis.icpc/doc/icpc-1.png")).not_to eq nil
       expect(@images.actions.index("git add -f images/ch.elexis.icpc/doc/icpc1.png")).to eq nil
@@ -243,6 +265,7 @@ describe 'ImagesCleanup' do
     it 'should add a "-" if the image name starts with the abbrev' do
       expect(@images.actions.index("git add -f images/ch.elexis.icpc/doc/icpc-1.png")).not_to eq nil
     end
+
   end
 
   describe "execute_cleanup" do

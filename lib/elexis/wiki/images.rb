@@ -22,7 +22,8 @@ end
 
 module Elexis
   module Wiki
-    ImagePattern = /(\[File:|Datei:|\[Image:)(?:[^\/:]*\/)?([ \w\.:\/-]*)([^\]\|]*)/
+    ImageWithSlashPattern = /(\[File:|Datei:|\[Image:)([^\/:\]]*[:\/])([\w.-]+)/
+    ImagePattern = /(\[File:|\[Datei:|\[Image:)((?:.+:|)[^\/:|]*)/
 
     #
     # This helper class collect information about all images used in
@@ -190,8 +191,9 @@ module Elexis
 
       def get_name_with_project(path)
         prefix =Images.get_project_abbreviation(path)
-        result = (prefix + '-' + File.basename(path)).downcase.gsub(':', '-')
-        result
+        basename = File.basename(path)
+        result = /^#{prefix}/i.match(basename) ? basename : (prefix + '-' + basename).gsub(':', '-')
+        result.downcase
       end
 
       def Images.get_small_name(path)
@@ -307,6 +309,7 @@ module Elexis
                           run_git_cmd("git rm -f --ignore-unmatch #{picture[:path]}", true) if picture[:path] != new_path
                          }
         @actions.uniq!
+        cleanup_mediawikis
         puts @actions.join("\n")
       ensure
         Dir.chdir(savedDir)
@@ -332,32 +335,90 @@ module Elexis
         lines = IO.readlines(mediawiki_file)
         lines.each{
           |line|
-          unless m = ImagePattern.match(line)
-            newLines << line
-          else
-            unless old_image_name.downcase.eql?(m[2].downcase) or  /\/#{old_image_name}/i.match(m[2])
-              puts "change_image_name_in_mediawiki #{__LINE__}  skip #{m}" if $VERBOSE
-              newLines << line
-            else
+          image_name = nil
+          if m = ImageWithSlashPattern.match(line)
+            image_name = m[2] + m[3]
+          elsif m = ImagePattern.match(line)
+            image_name = m[2]
+          end
+          unless image_name
+            newLines << fix_line(line)
+            next;
+          end
+          if old_image_name.downcase.eql?(image_name.downcase) or/\/#{old_image_name}/i.match(image_name)
               dirName = File.dirname(mediawiki_file)
               simpleName = File.join(dirName, File.basename(new_image_name))
+              raise "Could not find image" unless File.exists?(new_image_name)
               if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size >= 1
-              # if files = (Dir.glob(simpleName, File::FNM_CASEFOLD) +Dir.glob(old_image_name, File::FNM_CASEFOLD)) and files.size >= 1
-                new_line = line.sub(m[2], new_image_name)
-                new_line = new_line.sub(m[3], '') if m[3]
-                puts "change_image_name_in_mediawiki #{__LINE__}  #{line} aus #{m[2]} mit #{new_image_name}" if $VERBOSE
-                newLines << new_line
+                newLines << fix_line(line, old_image_name, new_image_name)
               else
-                msg =  "#{__LINE__} Could not find image for #{m[0]} searched for #{simpleName} in #{Dir.pwd}. files are #{files}"
-                raise msg
+                newLines << fix_line(line)
               end
-            end
+          else
+            newLines << fix_line(line)
           end
         }
         File.open(mediawiki_file, "w") {|f| f.write newLines.join.gsub(/\[\[Datei:|\[\[Image:/i, '[[File:')}
         run_git_cmd("git add #{mediawiki_file}")
       ensure Dir.chdir(savedDir)
       end
+      def fix_line(line, old_file=nil, new_file=nil)
+        line.gsub!(/(<U\+\h\h\h\h>)/,'') # remove pseudo UTF-8
+        old_ref = 'unknown'
+        unless old_file
+          image_name = nil
+          if m = ImageWithSlashPattern.match(line)
+            old_file = m[2] + m[3]
+            old_ref = m[3].downcase
+          elsif m = ImagePattern.match(line)
+            old_file = m[2]
+            old_ref = m[2].downcase
+          end
+          return line unless m
+        end
+        new_file ||= Images.get_small_name(old_file)
+        proj = Images.get_project_abbreviation(Dir.pwd)
+        change_to = nil
+        if File.exists?(new_file)
+          change_to ||= new_file
+        else
+          [ old_ref,
+            old_file.sub(/^#{proj}[_]/i, proj+'-'),
+            new_file.sub(/^#{proj}/i, ''),
+            proj + '-' + new_file.sub(/^#{proj}/i, ''),
+            new_file.sub(/^#{proj}-#{proj}/i, proj + '-'),
+            new_file.sub(/^#{proj}-(.*)/i, proj + '\1'),
+            (proj + '-' + new_file).downcase,
+            ].each{
+              |try_this|
+              if File.exists?(try_this.downcase)
+                change_to ||= try_this.downcase
+                break
+              end
+            }
+        end
+        return line unless change_to
+        line.sub(old_file, change_to)
+      end
+
+      def cleanup_mediawikis
+        savedDir = Dir.pwd
+        @docs.each do
+          |docDir|
+          Dir.chdir(File.join(@rootDir, docDir))
+            wikis = Dir.glob('*.mediawiki')
+            wikis.each{
+              |file|
+              output = ''
+              lines = IO.readlines(file)
+              lines.each{|line| output << fix_line(line) }
+              File.open(file, 'w+') { |f| f.write(output) }
+            }
+        end
+        ensure
+          Dir.chdir(savedDir)
+      end
+
     end
   end
 end
