@@ -157,6 +157,7 @@ module Elexis
             end
             rescue => e
               puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
+              FileUtils.rm_f(image) if File.exists?(image) and File.size(image) == 0
               puts "      was '#{json}'"
               puts "      error was #{e.inspect}"
           end

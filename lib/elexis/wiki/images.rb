@@ -10,9 +10,19 @@ require 'time'
 require 'yaml'
 require 'csv'
 
+class String
+  # Convert CamelCase to underscore
+  def underscore
+    self.gsub(/::/, '/').
+    gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+    gsub(/([a-z\d])([A-Z])/,'\1_\2').
+    downcase
+  end
+end
+
 module Elexis
   module Wiki
-    ImagePattern = /(\[File:|Datei:|\[Image:)([ \w\.\:\/]*)/i
+    ImagePattern = /(\[File:|Datei:|\[Image:)(?:[^\/:]*\/)?([ \w\.:\/-]*)([^\]\|]*)/
 
     #
     # This helper class collect information about all images used in
@@ -109,13 +119,13 @@ module Elexis
           sha256 = Digest::SHA256.hexdigest(IO.read(path))
           same_sha256 = @pictures.find_all{|x| x[:sha256] == sha256}
           same_name   = @pictures.find_all{|x| x[:name] == picture[:name]}
-          nrSha256 = same_name.collect{|c| get_small_name(c[:sha256])}.uniq
+          nrSha256 = same_name.collect{|c| Images.get_small_name(c[:sha256])}.uniq
           if same_sha256.size == 1 and nrSha256.size == 1
             puts "new_best_name 3 @short_and_sha_okay #{sha256} for #{path}" if debug
             picture[:rule] = 'short_and_sha_okay nr_single_sha'
             @short_and_sha_okay << path
             @nr_single_sha << same_sha256
-            picture[:best_name] = get_small_name(path)
+            picture[:best_name] = Images.get_small_name(path)
             return
           else
             msg = " nrSha #{sha256.size} #{sha256}"
@@ -129,16 +139,16 @@ module Elexis
             if found.size == 1  and nrSha256.size == 1
               puts "new_best_name 4 case_sensitives #{found}" if debug
               picture[:rule] = 'case_sensitives'
-              picture[:best_name] = get_small_name(path)
+              picture[:best_name] = Images.get_small_name(path)
               return
             end
             multiple = same_sha256.collect{|c| c[:name]}.uniq
-            to_reduce = same_sha256.collect{|c| get_small_name(c[:name])}.uniq
+            to_reduce = same_sha256.collect{|c| Images.get_small_name(c[:name])}.uniq
             if nrSha256.size == 1
               @to_short_names[path] = to_reduce
               puts "new_best_name 5 to_short_names #{multiple} =>  #{to_reduce} nrSha #{sha256.size} #{sha256}" if debug
               picture[:rule] = 'to_short_names'
-              picture[:best_name] = get_small_name(path)
+              picture[:best_name] = Images.get_small_name(path)
               return
             end
             puts "new_best_name  6 multiple #{multiple} to_reduce #{to_reduce} #{get_name_with_project(picture[:path])}" if debug
@@ -171,16 +181,22 @@ module Elexis
         initialize_database
       end
 
-      def get_name_with_project(path)
+      def Images.get_project_abbreviation(path)
         dir = File.dirname(path)
+        dir.sub!(/\/images$/, '')
         found = dir.sub(/(\.feature|[._]test.*|)\/doc/i, '').sub(/\.v\d$/, '')
-        result = (found.split('.')[-1] + '-' + File.basename(path)).downcase.gsub(':', '-')
+        found.split('.')[-1]
+      end
+
+      def get_name_with_project(path)
+        prefix =Images.get_project_abbreviation(path)
+        result = (prefix + '-' + File.basename(path)).downcase.gsub(':', '-')
         result
       end
 
-      def get_small_name(path)
+      def Images.get_small_name(path)
         ext =  File.extname(path)
-        to_consider = File.basename(path, ext).gsub(':','-')
+        to_consider = File.basename(path, ext).gsub(':','-').underscore
         if to_consider.index('.')
           part = to_consider.split('.')[-1].downcase
           if  part.split('_').size > 1
@@ -191,6 +207,10 @@ module Elexis
         else
           result = to_consider
         end
+        short = Images.get_project_abbreviation(path)
+        regexp = /^(#{short})([^-])/i
+        m = regexp.match(result)
+        result = result.sub(regexp, '\1-\2') if m and short
         (result + ext).downcase
       end
 
@@ -229,26 +249,12 @@ module Elexis
         end
       end
 
-      def remove_files_with_case_sensitive_changes(file_correct_case)
-        files = Dir.glob(file_correct_case + '*', File::FNM_CASEFOLD)
-        return if files.size == 1
-        files.each{
-          |file|
-            next if File.basename(file).eql?(File.basename(file_correct_case))
-            if @add_changes_to_git
-              run_git_cmd("git rm -f #{file}")
-            else
-              FileUtils.rm_f(file)
-            end
-        }
-      end
-
-      def run_git_cmd(git_cmd)
+      def run_git_cmd(git_cmd, may_fail=false)
         return unless @add_changes_to_git
         res = system(git_cmd)
         unless res
           raise "Running #{git_cmd} failed"
-        end
+        end unless may_fail
         @actions  << git_cmd
       end
 
@@ -266,7 +272,7 @@ module Elexis
           Dir.glob("*#{extension}").each  do
             |wiki_file|
           old_image_name = picture[:name]
-          new_image_name = picture[:best_name]
+          new_image_name = picture[:best_name].downcase
           if old_image_name.index('-')
             puts "Skipping mv #{old_image_name} #{new_image_name}"
             next
@@ -286,9 +292,20 @@ module Elexis
                        }
         end
         }
+
+        # change_image_name_in_mediawiki
         Dir.chdir(@rootDir)
         # Add all pictures which were downloaded and still have the same name
-        @pictures.each { |picture| run_git_cmd("git add -f #{picture[:path]}") if File.exist?(picture[:path]) }
+        @pictures.each { |picture|
+                          next unless picture[:best_name]
+                          dir = File.dirname(picture[:path])
+                          dir ||= '.'
+                          new_path = File.join(dir, picture[:best_name])
+                          next unless File.exists?(picture[:path])
+                          FileUtils.cp(picture[:path], new_path, :verbose => true)  unless File.exists?(new_path)
+                          run_git_cmd("git add -f #{new_path}")
+                          run_git_cmd("git rm -f --ignore-unmatch #{picture[:path]}", true) if picture[:path] != new_path
+                         }
         @actions.uniq!
         puts @actions.join("\n")
       ensure
@@ -299,6 +316,8 @@ module Elexis
       # We assume that the referenced new_image_name is living in the same directory
       # as the mediawiki_file
       def change_image_name_in_mediawiki(mediawiki_file, old_image_name, new_image_name)
+        savedDir = Dir.pwd
+        Dir.chdir(File.dirname(mediawiki_file))
         if new_image_name.downcase != File.basename(new_image_name).downcase
           raise "new_image_name #{new_image_name} may not contain a directory path"
         end
@@ -325,6 +344,7 @@ module Elexis
               if files = Dir.glob(simpleName, File::FNM_CASEFOLD) and files.size >= 1
               # if files = (Dir.glob(simpleName, File::FNM_CASEFOLD) +Dir.glob(old_image_name, File::FNM_CASEFOLD)) and files.size >= 1
                 new_line = line.sub(m[2], new_image_name)
+                new_line = new_line.sub(m[3], '') if m[3]
                 puts "change_image_name_in_mediawiki #{__LINE__}  #{line} aus #{m[2]} mit #{new_image_name}" if $VERBOSE
                 newLines << new_line
               else
@@ -336,6 +356,7 @@ module Elexis
         }
         File.open(mediawiki_file, "w") {|f| f.write newLines.join.gsub(/\[\[Datei:|\[\[Image:/i, '[[File:')}
         run_git_cmd("git add #{mediawiki_file}")
+      ensure Dir.chdir(savedDir)
       end
     end
   end

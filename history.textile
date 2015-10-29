@@ -1,3 +1,13 @@
+h3. Version 0.5.2 (2015-10-29)
+
+* Correctly rename picture with ':' and '/'.
+* Convert CamelCase to underscore
+
+h3. Version 0.5.1 (2015-10-24)
+
+* Ensure that files that start with the short project name are followed by a '-'
+* Accept picture containing '-' in their base_name
+
 h3. Version 0.5.1 (2015-10-23)
 
 * Cleanup doc
