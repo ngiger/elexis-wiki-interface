@@ -19,8 +19,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.add_dependency 'rubyzip', '~> 1.2.1'
   spec.add_dependency 'unicode'
-  spec.add_dependency 'mediawiki-gateway'     # needed to get pages and infos about pages
-  spec.add_dependency 'mediawiki_api'         # needed to push images
+  spec.add_dependency 'mediawiki-butt'
+  spec.add_dependency 'rest-client', '~> 2.0'
   spec.add_dependency 'eclipse-plugin', '>= 0.1'
   spec.add_development_dependency "bundler", "~> 1.10"
   spec.add_development_dependency "rake", "~> 10.0"

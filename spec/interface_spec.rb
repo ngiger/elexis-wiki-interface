@@ -9,14 +9,15 @@ describe 'Wiki_Interface' do
   before(:all) do
     skip 'does not work under travis-ci' if ENV['TRAVIS']
     @if = Elexis::Wiki::Interface.new
-    puts @if.wiki_url
     # expect(@if.wiki_url).to match /localhost/i # we don't want to test with a real wiki
     @test_image = "elexis_api_test.png"
     @test_image_file = File.join(File.join(File.dirname(__FILE__), 'data', 'push', 'elexis_api_test.png'))
     expect(File.exists?(@test_image_file))
+    if false
     res = @if.upload_image(@test_image, @test_image_file, 'TestKommentar Niklaus', nil)
     expect(res)
     expect(res.data['result']).to match match_upload_result
+    end
   end
 
   it "should be possible to if.upload an @test_image_file to path without ':' nor '/'" do
@@ -40,7 +41,6 @@ describe 'Wiki_Interface' do
 
   it "should be possible to if.upload an @test_image_file to a path with '/'" do
     expect(File.exists?(@test_image_file))
-#        def upload_image(filename, path, comment='', options = "ignorewarnings")
     res = @if.upload("api_test/api_test2.png", @test_image_file, 'TestKommentar Niklaus')
     expect(res.class).to eq MediawikiApi::Response
     expect(res.data['result']).to match match_upload_result
@@ -63,19 +63,22 @@ describe 'Wiki_Interface' do
     test_page = 'api_test_page'
     first_content = 'Some dummy content. First try'
     second_content = 'Some dummy content. second try'
+    # remove any laying old test_page if still
+    @if.delete(test_page) if @if.get(test_page)
+    expect(@if.get(test_page)).to eq nil
     res = @if.create(test_page, first_content, { :comment => 'dummy comment'})
-    expect(res.status).to eq 200
-    expect(res.data['result']).to match match_upload_result
+    content = @if.get(test_page)
+    expect(content.class).to eq String
+    expect(content).to match first_content
 
     inhalt = @if.get(test_page)
     expect(inhalt).to eq first_content
     res = @if.edit(test_page, second_content)
-    expect(res.status).to eq 200
-    expect(res.data['result']).to match match_upload_result
     inhalt = @if.get(test_page)
+    expect(inhalt.class).to eq String
     expect(inhalt).to eq second_content
     res = @if.delete(test_page)
-    expect(res.status).to eq 200
+    expect(res).to eq true
     inhalt = @if.get(test_page)
     expect(inhalt).to be_nil
   end

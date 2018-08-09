@@ -1,8 +1,6 @@
 #encoding: utf-8
 
 require 'eclipse/plugin'
-require 'media_wiki'
-require 'mediawiki_api'
 require 'elexis/wiki/images'
 require 'fileutils'
 require 'open-uri'
@@ -310,7 +308,7 @@ module Elexis
                          }
         @actions.uniq!
         cleanup_mediawikis
-        puts @actions.join("\n")
+        # puts @actions.join("\n")
       ensure
         Dir.chdir(savedDir)
       end
@@ -330,7 +328,7 @@ module Elexis
           @actions << "mv #{old_image_name} #{new_image_name}"
           FileUtils.mv(old_image_name, new_image_name, :verbose => true)
         end unless File.exists?(new_image_name)
-        puts "change_image_name_in_mediawiki #{Dir.pwd}/#{mediawiki_file}: #{old_image_name.inspect} => #{new_image_name.inspect}" # if $VERBOSE
+        puts "change_image_name_in_mediawiki #{Dir.pwd}/#{mediawiki_file}: #{old_image_name.inspect} => #{new_image_name.inspect}" if $VERBOSE
         newLines = []
         lines = IO.readlines(mediawiki_file)
         lines.each{

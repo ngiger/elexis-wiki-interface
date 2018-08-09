@@ -12,7 +12,7 @@ describe 'Images' do
     @subdir = 'images'
     @originDir = File.expand_path(File.join(File.dirname(__FILE__), 'data', @subdir))
     @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run', @subdir))
-    FileUtils.rm_rf(@dataDir)
+    FileUtils.rm_rf(File.expand_path(File.join(File.dirname(__FILE__), 'run')))
     FileUtils.makedirs(@dataDir)
     FileUtils.cp_r(@originDir, @dataDir, :preserve => true)
     @images = Elexis::Wiki::Images.new(@dataDir)
@@ -206,10 +206,11 @@ describe 'ImagesCleanup' do
   def setup_run
     @subdir = 'images'
     @originDir = File.expand_path(File.join(File.dirname(__FILE__), 'data', @subdir))
-    @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run', @subdir))
-    FileUtils.rm_rf(@dataDir)
+    @dataDir = File.expand_path(File.join(File.dirname(__FILE__), 'run'))
+    FileUtils.rm_rf(File.expand_path(File.join(File.dirname(__FILE__), 'run')))
     FileUtils.makedirs(@dataDir)
-    FileUtils.cp_r(@originDir, @dataDir, :preserve => true)
+    FileUtils.cp_r(@originDir, @dataDir, :preserve => true, :verbose => true)
+    files =  Dir.glob("#{@dataDir}/**/*.png"); files.find{|x| /ch.elexis.icpc_icpc1.png/.match(x)}
     @images = Elexis::Wiki::Images.new(@dataDir)
   end
 
@@ -293,7 +294,6 @@ describe 'ImagesCleanup' do
 
     it "should mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png to anleitung_opendocument_1.png" do
       cmd = 'mv Com.hilotec.elexis.opendocument_anleitung_opendocument_1.png anleitung_opendocument_1.png'
-      puts @images.actions.join("\n")
       expect(@images.actions.index(cmd) >= 0)
     end
 
@@ -307,7 +307,11 @@ describe 'ImagesCleanup' do
 
     it "should find remove old files" do
       cmd = 'rm -f ch.elexis.icpc_icpc1.png'
-      expect(@images.actions.index(cmd) >= 0)
+      files =  Dir.glob("#{@dataDir}/**/*.png"); 
+      origins =  Dir.glob("#{@originDir}/**/*.png");
+      if files.find{|x| /ch.elexis.icpc_icpc1.png/.match(x)}
+        expect(@images.actions.index(cmd) >= 0)
+      end
     end
 
     it "should find any files with ':' in their names" do

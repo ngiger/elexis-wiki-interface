@@ -1,8 +1,8 @@
 #encoding: utf-8
 
 require 'eclipse/plugin'
-require 'media_wiki'
-require 'mediawiki_api'
+require 'mediawiki-butt'
+require 'rest-client'
 require 'fileutils'
 require 'open-uri'
 require 'time'
@@ -20,8 +20,6 @@ module Elexis
           if ENV['TRAVIS']
             @user = 'nobody'
             @password = 'nopassword'
-            @mw_gw = MediaWiki::Gateway.new(@wiki_url)
-            @mw_api = MediawikiApi::Client.new @wiki_url
           else
             possibleCfgs = [File.join(Dir.pwd, 'config.yml'), '/etc/elexis-wiki-interface/config.yml', ]
             possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
@@ -31,13 +29,10 @@ module Elexis
             @wiki_url ||= defined?(RSpec) ? yaml['test_wiki'] : yaml['wiki']
             @user = yaml['user'] if yaml
             @password = yaml['password'] if yaml
-            @mw_gw = MediaWiki::Gateway.new(@wiki_url)
-            @mw_gw.login(@user, @password)
-            @mw_api = MediawikiApi::Client.new @wiki_url
-            res = @mw_api.log_in(@user, @password)
+            uri = URI(@wiki_url)
+            @client = MediaWiki::Butt.new(@wiki_url)
+            @client.login(@user, @password)
           end
-          puts "MediWiki #{@wiki_url} user #{@user} with password #{@password}" if $VERBOSE
-          wiki_url
         end
 
       public
@@ -48,49 +43,44 @@ module Elexis
         end
 
         def images(page)
-          imgs = @mw_gw.images(page).collect{|x| x.gsub(' ','_') }
+          all =@client.get_all_images().collect{|x| x.gsub(' ','_') }
+          all.find_all{|x| /#{page}:/i.match(x) }
         end
 
         def users
-          @mw_gw.users
+          @client.get_all_users
         end
 
         def contributions(username)
-          @mw_gw.contributions(username)
+          @client.get_user_contributions(username)
         end
 
         def get(page)
-          @mw_gw.get(page)
+          @client.get_text(page)
         end
 
         def create(page, content, options = {})
-          @mw_api.create_page(page, content)
+          @client.create_page(page, content)
         end
 
         def edit(page, text, comment = nil)
-          @mw_api.edit({:title => page, :text => text, :comment => comment})
+          if @client.get_text(page)
+            @client.edit(page, text, {summary: comment})
+          else
+            @client.create_page(page, text, {summary: comment})
+          end
         end
 
         def delete(page, reason='')
-          @mw_api.delete_page(page, reason)
+          @client.delete(page, reason)
         end
 
         def upload_image(filename, path, comment='', options = "ignorewarnings")
           # fails with mediawiki 1.19 because of missing @tokens
-          res = @mw_api.upload_image(filename, path, comment, options)
-          msg =  "Uploaded #{filename}"
-          unless res.data['result'] == 'Success'
-            puts "Unable to upload #{filename} #{res.data['result'] }"
-            raise "Unable to upload #{filename} #{res.data['result'] }"
-          end
-          res
-        rescue MediawikiApi::ApiError => e
-          msg =  "uploading #{filename} failed #{e}"
-          puts msg
-          puts e.backtrace.join("\n") if $VERBOSE
-          raise msg
+          res = @client.upload(path, filename)
         end
         alias_method :upload, :upload_image
+        # alias_method :delete, :delete_page
 
       def wiki_json_timestamp_to_time(json, page_or_img)
         return nil unless json
