@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    elexis-wiki-interface (0.5.4)
+    elexis-wiki-interface (0.5.5)
       eclipse-plugin (>= 0.1)
       mediawiki-butt
       rest-client (~> 2.0)
