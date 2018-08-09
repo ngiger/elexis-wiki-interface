@@ -11,14 +11,14 @@ script:
 install: bundle install --deployment --without debugger
 
 rvm:
-#  - 1.8.7 cannot run on ruby 1.8 because mediawiki-gateway requires at least Ruby 1.9
-  - 1.9.3
-  - 2.1.2
-  - 2.2.0
+#  - 2.2.x or earlier cannot run because mediawiki-butt requires at least Ruby 2.3
+  - 2.3.4
+  - 2.4.1
+  - 2.5.0
 
 matrix:
   allow_failures:
-    - rvm: 2.2.0
+    - rvm: 2.3.4
     - rvm: 2.1.2
 
 notifications:
