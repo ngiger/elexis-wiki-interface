@@ -22,6 +22,7 @@ module Elexis
         @info = Eclipse::Workspace.new(dir)
         @doc_projects = Dir.glob(File.join(dir, "doc_??", ".project"))
         @ws_dir = dir
+        @info.parse
         @info.parse_sub_dirs
         @info.show if $VERBOSE
         @views_missing_documentation        =[]
@@ -173,7 +174,6 @@ module Elexis
             pull_docs_perspectives(info)
             remove_image_files_with_id(id, info)
         }
-
         idx = 0
         @info.features.each{
           |id, info|
