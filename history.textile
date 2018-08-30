@@ -1,3 +1,16 @@
+h3. Version 0.5.6 (2018-08-30)
+
+* Fixed getting features
+* cleanup warnings, by updating to newer version of eclipse-plugin
+
+h3. Version 0.5.5 (2018-08-10)
+
+* Adapted to pomless structure
+
+h3. Version 0.5.4 (2017-11-17)
+
+* Update rubyzip
+
 h3. Version 0.5.3 (2015-10-29)
 
 * Remove dummy UTF-8 characters

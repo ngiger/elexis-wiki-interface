@@ -22,8 +22,8 @@ module Elexis
             @password = 'nopassword'
           else
             possibleCfgs = [File.join(Dir.pwd, 'config.yml'), '/etc/elexis-wiki-interface/config.yml', ]
-            possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exists?(cfg) }
-            raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exists?(@config_yml)
+            possibleCfgs.each{ |cfg| @config_yml = cfg; break if File.exist?(cfg) }
+            raise "need a config file #{possibleCfgs.join(' or ')} for wiki with user/password" unless File.exist?(@config_yml)
             yaml = YAML.load_file(@config_yml)
             @wiki_url = wiki_url
             @wiki_url ||= defined?(RSpec) ? yaml['test_wiki'] : yaml['wiki']
@@ -147,12 +147,12 @@ module Elexis
             end
             rescue => e
               puts "JSON: Could not fetch for image #{image} for #{pageName} using #{json_url}"
-              FileUtils.rm_f(image) if File.exists?(image) and File.size(image) == 0
+              FileUtils.rm_f(image) if File.exist?(image) and File.size(image) == 0
               puts "      was '#{json}'"
               puts "      error was #{e.inspect}"
           end
         end
-        puts "Downloaded image #{destination} #{File.size(destination)} bytes" if $VERBOSE and File.exists?(destination)
+        puts "Downloaded image #{destination} #{File.size(destination)} bytes" if $VERBOSE and File.exist?(destination)
       end
     end
   end

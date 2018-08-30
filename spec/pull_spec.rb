@@ -50,14 +50,13 @@ describe 'Plugin' do
         wiki_files = Dir.glob(search)
         puts "We have the pulled the following wiki_files\n#{wiki_files.join("\n")}"
       end
-      name = File.join(@dataDir, "ch.elexis.core.application.feature", "Ch.elexis.core.application.feature.feature.group.mediawiki")
+      name = File.join(@dataDir, "features", "ch.elexis.core.application.feature", "Ch.elexis.core.application.feature.feature.group.mediawiki")
       expect(Dir.glob(name).size).to eq 0
-      name = File.join(@dataDir, "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.agenda", "doc", "Ch.elexis.agenda.mediawiki")
       expect(Dir.glob(name).size).to eq 1
-      name = File.join(@dataDir, "ch.elexis.agenda", "*.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.agenda", "*.mediawiki")
       expect(Dir.glob(name).size).to eq(0)
-
-      name = File.join(@dataDir, "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.notes", "doc", "Ch.elexis.notes.mediawiki")
       expect(Dir.glob(name).size).to eq 1
   end
 
@@ -74,11 +73,11 @@ describe 'Plugin' do
   end
 
   it "should pull everything for ICPC" do
-      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.icpc", "doc", "P_ICPC.mediawiki")
       expect(Dir.glob(name).size).to eq 1
-      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.icpc", "doc", "ChElexisIcpcViewsEpisodesview.mediawiki")
       expect(Dir.glob(name).size).to eq 1
-      name = File.join(@dataDir, "ch.elexis.icpc", "doc", "Ch.elexis.icpc.mediawiki")
+      name = File.join(@dataDir, "bundles", "ch.elexis.icpc", "doc", "Ch.elexis.icpc.mediawiki")
       expect(Dir.glob(name).size).to eq 1
       content = IO.read(name)
       skip('test forimages for icpc no longer working')

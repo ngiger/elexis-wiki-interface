@@ -26,6 +26,7 @@ module Elexis
         @info.parse_sub_dirs
         @info.show if $VERBOSE
         @views_missing_documentation        =[]
+        @views_with_documentation           =[]
         @perspectives_missing_documentation =[]
         @features_missing_documentation     =[]
       end
@@ -42,7 +43,7 @@ module Elexis
             perspectives_missing_documentation.size == 0
           puts "Eclipse-Workspace #{@info.workspace_dir} seems to have documented all views, features, plugins and perspectives"
         else
-          puts "Eclipse-Workspace #{@info.workspace_dir} needs documenting "
+          puts "Eclipse-Workspace #{@info.workspace_dir} has #{@views_with_documentation.size} documented views, but needs documenting "
           if views_missing_documentation.size > 0
             puts "  #{views_missing_documentation.size} views"
             puts "    #{views_missing_documentation.inspect}" if details
@@ -256,9 +257,10 @@ module Elexis
         plugin.views.each{
           |id, view|
           pageName = viewToPageName(plugin.symbolicName, view)
-          content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
+          content = get_content_from_wiki(File.join(plugin.workspace, File.basename(plugin.jar_or_src), 'doc'), pageName)
           next if TestPattern.match(id)
           @views_missing_documentation << pageName unless content
+          @views_with_documentation  << pageName if content
         }
       end
       def pull_docs_perspectives(plugin)
@@ -266,7 +268,7 @@ module Elexis
         plugin.perspectives.each{
           |id, perspective|
           pageName = perspectiveToPageName(perspective)
-          content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
+          content = get_content_from_wiki(File.join(plugin.workspace, File.basename(plugin.jar_or_src), 'doc'), pageName)
           next if TestPattern.match(id)
           @perspectives_missing_documentation << pageName unless content
         }
@@ -274,15 +276,16 @@ module Elexis
       def pull_docs_plugins(plugin)
         id = plugin.symbolicName
         pageName = id.capitalize
-        content = get_content_from_wiki(File.join(@info.workspace_dir, File.basename(plugin.jar_or_src), 'doc'), pageName)
+        content = get_content_from_wiki(File.join(plugin.workspace, File.basename(plugin.jar_or_src), 'doc'), pageName)
         return if TestPattern.match(id)
       end
       def pull_docs_features(feature)
         id = feature.symbolicName
         pageName = id.capitalize
-        content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName)
+        feature_dir  = feature.workspace || File.join( @info.workspace_dir, id)
+        content = get_content_from_wiki(File.join(feature_dir, 'doc'), pageName)
         unless content
-          content = get_content_from_wiki(File.join(@info.workspace_dir, id, 'doc'), pageName.sub(/feature$/, 'feature.feature.group'))
+          content = get_content_from_wiki(File.join(feature_dir, 'doc'), pageName.sub(/feature$/, 'feature.feature.group'))
           puts "pull_docs_features failed #{id} #{pageName}" unless content
         end
       end
